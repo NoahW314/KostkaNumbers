@@ -1,0 +1,123 @@
+import Mathlib
+import KostkaNumbers.Diagrams
+import KostkaNumbers.Util
+
+/-
+Definition of the content of a SemistandardYoungTableau, i.e. the multiset of numbers
+  in the entries of the tableau.
+Also some lemmas about the content of various special types of diagrams
+-/
+
+open YoungDiagram
+
+variable {γ : YoungDiagram} {T : SemistandardYoungTableau γ}
+
+namespace SemistandardYoungTableau
+
+def content (T : SemistandardYoungTableau γ) :=
+  Multiset.map (fun (i, j) => T i j) (γ.cells).val
+
+@[simp] lemma content_card_eq_card : T.content.card = γ.card := by
+  simp [content]
+
+lemma mem_content_of_mem_cells {i j : ℕ} (h : (i, j) ∈ γ) : T i j ∈ T.content := by
+  simp only [content, Multiset.mem_map, Finset.mem_val, YoungDiagram.mem_cells, Prod.exists]
+  use i; use j
+
+lemma mem_content_of_nonzero {i j : ℕ} (h : T i j ≠ 0) : T i j ∈ T.content := by
+  apply mem_content_of_mem_cells
+  contrapose! h; exact T.zeros h
+
+
+def bot_ssyt : SemistandardYoungTableau ⊥ := ⟨0, by simp, by simp, by simp⟩
+
+@[simp] lemma bot_content : bot_ssyt.content = ⊥ := by simp [content]
+
+lemma content_eq_bot_iff : T.content = ⊥ ↔ γ = ⊥ := by
+  simp [content]; symm
+  exact YoungDiagram.ext_iff
+
+lemma ssyt_bot (T : SemistandardYoungTableau ⊥) : T = bot_ssyt := by
+  ext i j
+  rw [zeros T (notMem_bot (i, j)), zeros bot_ssyt (notMem_bot (i, j))]
+
+lemma zero_entry_of_bot {i j : ℕ} (h : γ = ⊥) : T i j = 0 := by
+  apply T.zeros; rw [h]; apply notMem_bot
+
+
+
+
+lemma highestWeight_horizontal_content (n : ℕ) :
+    (highestWeight (horizontalDiagram n)).content = Multiset.replicate n 0 := by
+  simp [content, horizontalDiagram,
+    ofRowLens, YoungDiagram.cellsOfRowLens]
+
+
+
+lemma entry_zero_of_content_eq_replicate (n : ℕ)
+    (h : T.content = Multiset.replicate n 0) (i j : ℕ) : T i j = 0 := by
+  by_cases hb : γ = ⊥
+  · exact zero_entry_of_bot hb
+
+  suffices T i j ∈ T.content by
+    rw [h] at this
+    exact Multiset.eq_of_mem_replicate this
+  by_cases htij : T i j = 0
+  · rw [htij, h]
+    refine Multiset.mem_replicate.mpr ?_
+    simp only [ne_eq, and_true]
+    contrapose! hb
+    rw [hb, Multiset.replicate_zero, ← Multiset.bot_eq_zero, content_eq_bot_iff] at h
+    exact h
+  exact mem_content_of_nonzero htij
+
+
+
+
+lemma content_horizontal_ofMultiset (μ : Multiset ℕ) :
+    (horizontal_ofMultiset μ).content = μ := by
+  apply Multiset.induction_on_with_le μ
+  · simp [content, Finset.eq_empty_iff_forall_notMem]
+  intro n s _ _ hn hs
+  simp [content, horizontalDiagram, ofRowLens, YoungDiagram.cellsOfRowLens]
+  congr
+  · apply horizontal_ofMultiset_cons_largest_end s hn
+  symm; nth_rw 1 [← hs]; symm
+  simp [content, horizontalDiagram, ofRowLens, YoungDiagram.cellsOfRowLens]
+  apply Multiset.map_congr rfl
+  intro x hx; rw [Multiset.mem_range] at hx
+  exact horizontal_ofMultiset_cons_largest s hn x hx
+
+lemma eq_horizontal_ofMultiset_content {n : ℕ}
+    (T : SemistandardYoungTableau (horizontalDiagram n)) :
+    T.entry = (horizontal_ofMultiset (T.content)).entry := by
+  ext i j
+  by_cases hij : ¬(j < T.content.card ∧ i = 0)
+  · simp only [horizontal_ofMultiset, hij, reduceDIte]
+    apply T.zeros
+    simp only [mem_horizontalDiagram]
+    rw [content_card_eq_card, horizontalDiagram_card] at hij
+    rw [And.comm]; exact hij
+  push_neg at hij
+  simp only [horizontal_ofMultiset, hij, and_true, reduceDIte]
+  rw [List.getElem_map_range n (fun j => T.entry 0 j)]
+  · congr
+    apply List.eq_of_perm_of_sorted ?_ ?_ (List.sorted_mergeSort' _ _)
+    · apply List.Perm.symm
+      apply List.Perm.trans (List.mergeSort_perm _ _)
+      rw [← Multiset.coe_eq_coe, Multiset.coe_toList]
+      simp [content, horizontalDiagram, ofRowLens, YoungDiagram.cellsOfRowLens]
+      rw [← Multiset.map_coe, Multiset.coe_range]
+    · unfold List.Sorted
+      rw [List.pairwise_map, List.pairwise_iff_getElem]
+      simp
+      intro i j hi hj hij
+      apply T.row_weak hij
+      simp [hj]
+  · simp [content_card_eq_card, horizontalDiagram_card] at hij
+    exact hij.1
+  · simp
+
+
+
+end SemistandardYoungTableau
