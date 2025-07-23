@@ -366,8 +366,82 @@ lemma replicate_add_counts_of_notMem {a : α} {M : Multiset α} (h : a ∉ M) (n
 
 
 
+
 variable {μ : Multiset ℕ}
 
+
+lemma replicate_add_counts {a b : ℕ} {M s : Multiset ℕ} (hb : b ∉ M) (hs : M.counts = s)
+  (h0 : 0 ∉ a ::ₘ s) : (replicate a b + M).counts = a ::ₘ s := by
+  rw [replicate_add_counts_of_notMem hb a, hs, add_comm, singleton_add]
+  rw [mem_cons, not_or] at h0
+  symm; exact h0.1
+
+lemma map_count_replicate_add_eq_map_count_append {a b : ℕ} {M s : Multiset ℕ}
+    (hbM : b ∉ M) (hb : b = s.card) :
+    List.map (fun n ↦ count n (replicate a b + M)) (List.range (a ::ₘ s).card) =
+    (List.map (fun n ↦ count n M) (List.range s.card)) ++ [a] := by
+  rw [List.map_eq_append_iff]
+  use List.range (s.card); use [s.card]
+  constructor
+  · rw [card_cons, List.range_succ]
+  constructor
+  · refine List.map_congr_left ?_
+    intro n hn
+    rw [List.mem_range] at hn
+    rw [count_add, count_replicate]
+    apply ne_of_lt at hn
+    symm at hn
+    simp [hb, hn]
+  · simp [count_replicate, ← hb, hbM]
+
+lemma sorted_map_count_replicate_add {a b : ℕ} {M s : Multiset ℕ}
+    (hs : M.counts = s) (ha : ∀ m ∈ s, m ≥ a) (hM : ∀ n < s.card, n ∈ M) (hbM : b ∉ M)
+    (hb : b = s.card) (hsort : List.Sorted (fun x1 x2 ↦ x1 ≥ x2)
+      (List.map (fun n ↦ count n M) (List.range s.card))) :
+    List.Sorted (fun x1 x2 ↦ x1 ≥ x2) (List.map
+    (fun n ↦ count n (replicate a b + M)) (List.range (a ::ₘ s).card)) := by
+  rw [map_count_replicate_add_eq_map_count_append hbM hb, List.Sorted, List.pairwise_append]
+  constructor; swap; constructor
+  · exact List.pairwise_singleton (fun x1 x2 ↦ x1 ≥ x2) a
+  · intro m hm a' ha'
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at ha'
+    rw [ha']
+    refine ha m ?_
+    rw [← hs, counts, mem_map]
+    rw [List.mem_map] at hm
+    obtain ⟨n, hns, hnm⟩ := hm
+    use n; constructor
+    · rw [List.mem_range] at hns
+      rw [mem_dedup]
+      exact hM n hns
+    · exact hnm
+  · exact hsort
+
+
+lemma forall_lt_card_mem_replicate_add {a b : ℕ} {M s : Multiset ℕ}
+    (hM : ∀ n < s.card, n ∈ M) (hb : b = s.card) (h0 : 0 ∉ a ::ₘ s)
+    (n : ℕ) (hn : n < (a ::ₘ s).card) : n ∈ replicate a b + M := by
+
+  rw [card_cons] at hn
+  by_cases hn' : n = s.card
+  · rw [mem_add, mem_replicate, hn']; left
+    constructor;
+    · rw [mem_cons, not_or] at h0
+      symm; exact h0.1
+    · symm at hb; exact hb
+  rw [mem_add]; right
+  refine hM n ?_
+  omega
+
+lemma forall_ge_card_notMem_replicate_add {a b : ℕ} {M s : Multiset ℕ}
+    (hM' : ∀ n ≥ s.card, n ∉ M) (hb : b = s.card)
+    (n : ℕ) (hn : n ≥ (a ::ₘ s).card) : n ∉ replicate a b + M := by
+  rw [card_cons] at hn
+  rw [mem_add, not_or, mem_replicate, not_and_or]
+  constructor
+  · right; omega
+  · refine hM' n ?_
+    omega
 
 theorem exists_fromCounts (μ : Multiset ℕ) : 0 ∉ μ → ∃ M : Multiset ℕ,
     M.counts = μ ∧ (List.Sorted (· ≥ ·) <|
@@ -387,60 +461,12 @@ theorem exists_fromCounts (μ : Multiset ℕ) : 0 ∉ μ → ∃ M : Multiset �
     have hb : b ∉ M := by refine hM' b ?_; rfl
     use ((replicate a b) + M)
     constructor
-    · rw [replicate_add_counts_of_notMem hb a, hs, add_comm, singleton_add]
-      rw [mem_cons, not_or] at h0
-      symm; exact h0.1
+    · exact replicate_add_counts hb hs h0
     constructor
-    · suffices List.map (fun n ↦ count n (replicate a b + M)) (List.range (a ::ₘ s).card) =
-          (List.map (fun n ↦ count n M) (List.range s.card)) ++ [a] by
-        rw [this, List.Sorted, List.pairwise_append]
-        constructor; swap; constructor
-        · exact List.pairwise_singleton (fun x1 x2 ↦ x1 ≥ x2) a
-        · intro m hm a' ha'
-          simp only [List.mem_cons, List.not_mem_nil, or_false] at ha'
-          rw [ha']
-          refine ha m ?_
-          rw [← hs, counts, mem_map]
-          rw [List.mem_map] at hm
-          obtain ⟨n, hns, hnm⟩ := hm
-          use n; constructor
-          · rw [List.mem_range] at hns
-            rw [mem_dedup]
-            exact hM n hns
-          · exact hnm
-        · exact hsort
-      rw [List.map_eq_append_iff]
-      use List.range (s.card); use [s.card]
-      constructor
-      · rw [card_cons, List.range_succ]
-      constructor
-      · refine List.map_congr_left ?_
-        intro n hn
-        rw [List.mem_range] at hn
-        rw [count_add, count_replicate]
-        apply ne_of_lt at hn
-        symm at hn
-        simp [b, hn]
-      · simp [count_replicate, b, hb]
+    · exact sorted_map_count_replicate_add hs ha hM hb (rfl) hsort
     constructor
-    · rw [card_cons]
-      intro n hn
-      by_cases hn' : n = s.card
-      · rw [mem_add, mem_replicate, hn']; left
-        constructor;
-        · rw [mem_cons, not_or] at h0
-          symm; exact h0.1
-        · rfl
-      rw [mem_add]; right
-      refine hM n ?_
-      omega
-    · rw [card_cons]
-      intro n hn
-      rw [mem_add, not_or, mem_replicate, not_and_or]
-      constructor
-      · right; omega
-      · refine hM' n ?_
-        omega
+    · exact forall_lt_card_mem_replicate_add hM (rfl) h0
+    · exact forall_ge_card_notMem_replicate_add hM' (rfl)
 
 
 noncomputable
@@ -471,6 +497,13 @@ lemma notMem_fromCounts (μ : Multiset ℕ) (n : ℕ) (hn : n ≥ (μ.remove 0).
   let h := Classical.choose_spec (exists_fromCounts (μ.remove 0) (notMem_of_remove μ 0))
   exact h.2.2.2 n hn
 
+lemma mem_fromCounts_iff {n : ℕ} {μ : Multiset ℕ} (h0 : 0 ∉ μ) :
+    n ∈ μ.fromCounts ↔ n < μ.card := by
+  nth_rw 2 [← remove_of_notMem μ 0 h0]
+  constructor
+  · contrapose!
+    exact notMem_fromCounts μ n
+  · exact mem_fromCounts μ n
 
 lemma fromCounts_eq_remove_zero_fromCounts : μ.fromCounts = (μ.remove 0).fromCounts := by
   simp [fromCounts, remove]
@@ -569,7 +602,61 @@ lemma remove_fromCounts_remove_counts_card :
       push_neg at h0; rw [← Nat.pos_iff_ne_zero] at h0
       exact mem_fromCounts μ 0 h0
 
+lemma cons_remove {μ : Multiset ℕ} (a : ℕ) : (a ::ₘ μ).remove a = μ.remove a := by
+  simp [Multiset.remove]
+
+lemma cons_fromCounts_of_min {μ : Multiset ℕ} (n : ℕ) (h : ∀ m ∈ μ, m ≥ n) :
+    (n ::ₘ μ).fromCounts = μ.fromCounts + Multiset.replicate n (μ.card) := by
+  by_cases h0 : 0 ∈ μ ∨ n = 0
+  · have hn : n = 0 := by
+      rcases h0 with h0 | h0
+      · specialize h 0 h0
+        rw [ge_iff_le, nonpos_iff_eq_zero] at h
+        exact h
+      · exact h0
+    rw [hn, Multiset.replicate_zero, add_zero,
+      Multiset.fromCounts_eq_remove_zero_fromCounts, cons_remove,
+      ← Multiset.fromCounts_eq_remove_zero_fromCounts]
+
+  push_neg at h0
+  obtain ⟨h0, hn0⟩ := h0
+  symm
+  have hnμ0 : 0 ∉ n ::ₘ μ := by symm at hn0; simp [h0, hn0]
+  have hM : ∀ n < μ.card, n ∈ μ.fromCounts := by
+    intro n; exact (Multiset.mem_fromCounts_iff h0).mpr
+  have hμ' : μ.card ∉ μ.fromCounts := by
+    refine Multiset.notMem_fromCounts μ μ.card ?_
+    rw [Multiset.remove_of_notMem μ 0 h0]
+  rw [add_comm, Multiset.eq_fromCounts_iff]
+  constructor; swap; constructor; swap; constructor
+  · refine Multiset.forall_lt_card_mem_replicate_add hM rfl hnμ0
+  · refine Multiset.forall_ge_card_notMem_replicate_add ?_ rfl
+    · intro n
+      rw [(Multiset.mem_fromCounts_iff h0)]
+      push_neg
+      simp only [ge_iff_le, imp_self]
+  · rw [Multiset.remove_of_notMem (n ::ₘ μ) 0 hnμ0]
+    refine Multiset.sorted_map_count_replicate_add (Multiset.fromCounts_counts h0)
+      h hM hμ' rfl ?_
+    · let hμ := Multiset.fromCounts_sorted μ
+      rw [Multiset.remove_of_notMem μ 0 h0] at hμ
+      exact hμ
+  · refine Multiset.replicate_add_counts hμ' (Multiset.fromCounts_counts h0) hnμ0
+  · exact hnμ0
+
+
 end Counts
+
+lemma sum_eq_zero_iff_eq_zero {μ : Multiset ℕ} (h0 : 0 ∉ μ) : μ.sum = 0 ↔ μ = 0 := by
+  constructor
+  · intro h
+    rw [Multiset.sum_eq_zero_iff] at h
+    rw [Multiset.eq_zero_iff_forall_notMem]
+    intro x
+    contrapose! h0
+    specialize h x h0
+    rw [← h]; exact h0
+  · intro h; rw [h, Multiset.sum_zero]
 
 
 end Multiset

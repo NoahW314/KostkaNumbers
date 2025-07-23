@@ -50,14 +50,18 @@ lemma zero_notMem_rowLens : 0 ∉ Multiset.ofList γ.rowLens := by
   apply γ.pos_of_mem_rowLens at h
   contradiction
 
-lemma entry_lt_rowLens_card (h : T.content = (Multiset.ofList γ.rowLens).fromCounts) {i j : ℕ}
-    (hij : (i, j) ∈ γ) : T i j < (Multiset.ofList γ.rowLens).card := by
-  suffices T i j ∈ (Multiset.ofList γ.rowLens).fromCounts by
+lemma entry_lt_card {μ : Multiset ℕ} (h : T.content = μ.fromCounts) {i j : ℕ}
+    (hij : (i, j) ∈ γ) (h0 : 0 ∉ μ) : T i j < μ.card := by
+  suffices T i j ∈ μ.fromCounts by
     contrapose! this
-    rw [← Multiset.remove_of_notMem (Multiset.ofList γ.rowLens) 0 zero_notMem_rowLens] at this
-    exact Multiset.notMem_fromCounts (Multiset.ofList γ.rowLens) (T i j) this
+    rw [← Multiset.remove_of_notMem μ 0 h0] at this
+    exact Multiset.notMem_fromCounts μ (T i j) this
   rw [← h]
   exact mem_content_of_mem_cells hij
+
+lemma entry_lt_rowLens_card (h : T.content = (Multiset.ofList γ.rowLens).fromCounts) {i j : ℕ}
+    (hij : (i, j) ∈ γ) : T i j < (Multiset.ofList γ.rowLens).card := by
+  exact entry_lt_card h hij zero_notMem_rowLens
 
 lemma range_colLen_eq_map_dedup (γ : YoungDiagram) : Multiset.range (γ.colLen 0) =
     (Multiset.map (fun a ↦ if a ∈ γ then a.1 else 0) γ.cells.val).dedup := by
