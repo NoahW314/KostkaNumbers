@@ -1,6 +1,8 @@
 import Mathlib
 import KostkaNumbers.Basic
 import KostkaNumbers.Dominate
+import KostkaNumbers.HookDiagram
+import KostkaNumbers.HorizontalDiagram
 
 /-
 This formalization is based on these proofs given by Matthew Fayers
@@ -1237,3 +1239,14 @@ theorem kostka_pos_iff_dominates (h : γ.card = μ.sum) (h0 : 0 ∉ μ) : 0 < ko
     constructor
     · exact exists_ssyt_of_dominates γ μ hd h h0
     · exact finite_ssyt_content
+
+
+theorem kostka_eq_zero_iff_forall_not {γ : YoungDiagram} {μ : Multiset ℕ} :
+    kostkaNumber γ μ = 0 ↔ ∀ T : SemistandardYoungTableau γ, T.content ≠ μ.fromCounts := by
+  constructor
+  · intro h
+    contrapose! h
+    simp only [kostkaNumber, Set.coe_setOf, nonempty_subtype, h, ne_eq, Nat.card_eq_zero,
+      not_isEmpty_of_nonempty, false_or, not_infinite_iff_finite]
+    exact finite_ssyt_content
+  · exact kostka_eq_zero

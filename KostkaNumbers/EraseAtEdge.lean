@@ -1,5 +1,6 @@
 import Mathlib
 import KostkaNumbers.Content
+import KostkaNumbers.HookDiagram
 
 open YoungDiagram SemistandardYoungTableau
 

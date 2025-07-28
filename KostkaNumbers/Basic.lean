@@ -3,6 +3,8 @@ import KostkaNumbers.Util
 import KostkaNumbers.Diagrams
 import KostkaNumbers.Content
 import KostkaNumbers.EraseAtEdge
+import KostkaNumbers.HookDiagram
+import KostkaNumbers.HorizontalDiagram
 
 open SemistandardYoungTableau
 open YoungDiagram
