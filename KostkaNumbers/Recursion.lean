@@ -22,6 +22,7 @@ lemma antitone_sub_of_antitone (f g : ℕ →₀ ℕ)
     rw [Finsupp.coe_tsub, Pi.sub_apply, Pi.sub_apply]
     exact h j
 
+
 noncomputable
 def sub (γ : YoungDiagram) (f : ℕ →₀ ℕ)
   (h : ∀ i, γ.rowLens' i - f i ≥ γ.rowLens' (i + 1) - (f (i + 1))) : YoungDiagram
@@ -785,7 +786,7 @@ lemma exists_mem_sdiff_of_ne {γ : YoungDiagram} {f g : ℕ →₀ ℕ}
       · omega
 
 open Classical in
-theorem kostka_recusion (γ : YoungDiagram) (μ : Multiset ℕ) (hμ : μ ≠ 0) (h0 : 0 ∉ μ)
+theorem kostka_recursion (γ : YoungDiagram) (μ : Multiset ℕ) (hμ : μ ≠ 0) (h0 : 0 ∉ μ)
     (h : γ.card = μ.sum) :
     kostkaNumber γ μ = ∑ f : recUnionType γ,
     kostkaNumber (γ.sub f.1 (sub_le_sub_of_sub_le_next f.2.1)) (μ.erase (min_el μ hμ)) := by
