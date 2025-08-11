@@ -39,20 +39,6 @@ lemma sort_triple_ge {a b c : ℕ} (hab : a ≥ b) (hbc : b ≥ c) :
   simp
 
 
-@[simp] lemma card_ofRowLens {L : List ℕ} {hL : List.Sorted (· ≥ ·) L}
-    (hp : ∀ x ∈ L, 0 < x) :
-    (ofRowLens L hL).card = L.sum := by
-  rw [card_eq_sum_rowLens, rowLens_ofRowLens_eq_self hp]
-  simp only [List.get_eq_getElem, Fin.sum_univ_getElem]
-
-lemma rowLen_ofRowLens_eq_zero {L : List ℕ} {hL : List.Sorted (· ≥ ·) L} {i : ℕ}
-    (hp : ∀ x ∈ L, 0 < x) (hi : ¬i < L.length) :
-    (ofRowLens L hL).rowLen i = 0 := by
-  rw [← Nat.le_zero]
-  refine Nat.le_of_not_gt ?_
-  rw [gt_iff_lt, ← mem_iff_lt_rowLen, mem_iff_lt_colLen, ← length_rowLens,
-    rowLens_length_ofRowLens hp]
-  exact hi
 
 
 /-
@@ -86,10 +72,10 @@ lemma g22u211 (T : SemistandardYoungTableau (ofRowLens [2, 2] (sorted_pair (by r
       · rw [rowLens_length_ofRowLens]
         all_goals simp
     by_cases hj : j < 2
-    · rw [zero_iff_of_mem T ?_ ?_ hT (hje.mp hj)]
+    · rw [zero_iff_of_mem T ?_ hT (hje.mp hj)]
       · rw [max_el_triple one_le_two (by rfl)]
         simp only [hj, and_self]
-      all_goals simp
+      simp
     · refine T.zeros ?_
       rw [← hje]; exact hj
   · simp only [Tg22u211, hi', imp_false, IsEmpty.forall_iff, hi]
@@ -218,7 +204,6 @@ lemma g32u221 (T T' : SemistandardYoungTableau (ofRowLens [3, 2] st32))
         rw [hi0]; simp [hi0] at hij
         have h01 : (0, 1) ∈ (ofRowLens [3, 2] st32) := by simp [mem_ofRowLens]
         have hμ : ({2, 2, 1} : Multiset ℕ) ≠ 0 := by simp
-        have h0 : 0 ∉ ({2, 2, 1} : Multiset ℕ) := by simp
         have hmax : max_el ({2, 2, 1} : Multiset ℕ) hμ = 2 := by
           exact max_el_triple (by rfl) (one_le_two)
         have hγ : (ofRowLens [3, 2] st32) ≠ ⊥ := by
@@ -228,8 +213,8 @@ lemma g32u221 (T T' : SemistandardYoungTableau (ofRowLens [3, 2] st32))
         interval_cases j
         · rw [top_left_of_content_fromCounts hγ hT,
             top_left_of_content_fromCounts hγ hT']
-        · rw [(zero_iff_of_mem T hμ h0 hT h01).mpr,
-            (zero_iff_of_mem T' hμ h0 hT' h01).mpr]
+        · rw [(zero_iff_of_mem T hμ hT h01).mpr,
+            (zero_iff_of_mem T' hμ hT' h01).mpr]
           all_goals rw [hmax]; simp
         · exact h
       · rw [T.zeros hij, T'.zeros hij]
@@ -239,11 +224,10 @@ lemma g32u221_02_eq_one_or_two (T : SemistandardYoungTableau (ofRowLens [3, 2] s
     T 0 2 = 1 ∨ T 0 2 = 2 := by
   suffices 0 < T 0 2 ∧ T 0 2 < 3 by omega
   have hμ : ({2, 2, 1} : Multiset ℕ) ≠ 0 := by simp
-  have h0 : 0 ∉ ({2, 2, 1} : Multiset ℕ) := by simp
   have hmax : max_el ({2, 2, 1} : Multiset ℕ) hμ = 2 := by
     exact max_el_triple (by rfl) (one_le_two)
   constructor
-  · rw [Nat.pos_iff_ne_zero, ne_eq, zero_iff_of_mem T hμ h0 hT, hmax]
+  · rw [Nat.pos_iff_ne_zero, ne_eq, zero_iff_of_mem T hμ hT, hmax]
     all_goals simp [mem_ofRowLens]
   · have hT02 : T 0 2 ∈ T.content := by
       refine mem_content_of_mem_cells ?_
@@ -253,11 +237,10 @@ lemma g32u221_02_eq_one_or_two (T : SemistandardYoungTableau (ofRowLens [3, 2] s
 
 lemma kostka_g32u221_le : kostkaNumber (ofRowLens [3, 2] st32)
     ({2, 2, 1} : Multiset ℕ) ≤ 2 := by
-  rw [kostkaNumber, Nat.card_eq_card_finite_toFinset finite_ssyt_content]
+  rw [kostkaNumber_eq_card_ssyt_content, Nat.card_eq_card_finite_toFinset (finite_ssyt_content _ _)]
   refine Nat.le_of_not_gt ?_
   rw [gt_iff_lt, Finset.two_lt_card]
-  simp only [Set.Finite.mem_toFinset, Set.mem_setOf_eq, ne_eq,
-    not_exists, not_and, not_not]
+  simp only [Set.Finite.mem_toFinset, ne_eq, not_exists, not_and, not_not]
   intro T hT T' hT' T'' hT'' hTT' hTT''
   rw [g32u221 T' T'' hT' hT'']
   rw [g32u221 T T' hT hT'] at hTT'
@@ -362,18 +345,17 @@ lemma g33u222 (T : SemistandardYoungTableau (ofRowLens [3, 3] st33))
     ∀ i ≠ 1, ∀ j, T i j = Tg33u222 i j := by
   intro i hi j
   have hμ : ({2, 2, 2} : Multiset ℕ) ≠ 0 := by simp
-  have h0 : 0 ∉ ({2, 2, 2} : Multiset ℕ) := by simp
   have hmax : max_el ({2, 2, 2} : Multiset ℕ) hμ = 2 := max_el_triple (by rfl) (by rfl)
   fun_cases Tg33u222
-  · rw [zero_iff_of_mem T hμ h0 hT ?_, hmax]
+  · rw [zero_iff_of_mem T hμ hT ?_, hmax]
     · simp
     · simp [mem_ofRowLens]
-  · rw [zero_iff_of_mem T hμ h0 hT ?_, hmax]
+  · rw [zero_iff_of_mem T hμ hT ?_, hmax]
     · simp
     · simp [mem_ofRowLens]
   · have hT0 : T 0 2 ≥ 1 := by
       suffices T 0 2 > 0 by exact this
-      rw [gt_iff_lt, Nat.pos_iff_ne_zero, ne_eq, zero_iff_of_mem T hμ h0 hT ?_, hmax]
+      rw [gt_iff_lt, Nat.pos_iff_ne_zero, ne_eq, zero_iff_of_mem T hμ hT ?_, hmax]
       · simp
       · simp [mem_ofRowLens]
     refine antisymm hT0 ?_

@@ -1,5 +1,5 @@
 import Mathlib
-import KostkaNumbers.Util
+import KostkaNumbers.Util.Util
 
 
 def Dominates (L L' : List ℕ) := ∀ r : ℕ, ∑ i : Fin L.length with i.1 ≤ r,
@@ -82,6 +82,18 @@ lemma sum_two_le_of_dominates {L L' : List ℕ} (hd : L ⊴ L')
 
 lemma dominates_self {L : List ℕ} : L ⊴ L := by intro r; rfl
 
+lemma dominates_nil {L : List ℕ} : [] ⊴ L := by intro r; simp
+
+lemma nil_dominates_of_sum_eq_zero {L : List ℕ} (h : L.sum = 0) : L ⊴ [] := by
+  intro r
+  simp only [List.length_nil, Finset.univ_eq_empty, Finset.filter_empty, List.get_eq_getElem,
+    Finset.sum_empty, ge_iff_le, nonpos_iff_eq_zero, Finset.sum_eq_zero_iff, Finset.mem_filter,
+    Finset.mem_univ, true_and]
+  intro i hi
+  rw [List.sum_eq_zero_iff] at h
+  refine h _ ?_
+  exact List.getElem_mem i.isLt
+
 lemma dominates_of_max_length_eq_zero {L L' : List ℕ} (h : max L.length L'.length = 0) :
     L ⊴ L' := by
   suffices L = L' by rw [this]; exact dominates_self
@@ -107,7 +119,17 @@ lemma sum_with_eq_sum_with {L : List ℕ} {r s : ℕ} (hr : r ≥ L.length - 1) 
     ∑ i : Fin L.length with i.1 ≤ s, L.get i := by
   rw [sum_with_eq_sum_with_length hr, sum_with_eq_sum_with_length hs]
 
-lemma dominates_of_forall_le_max {L L' : List ℕ} (h : ∀ r < max L.length L'.length,
+lemma sum_with_eq_sum_univ {L : List ℕ} (r : ℕ) (h : r ≥ L.length - 1) :
+    ∑ i, L.get i = ∑ i with i.1 ≤ r, L.get i := by
+  symm
+  refine Finset.sum_subset ?_ ?_
+  · simp
+  · simp only [Finset.mem_univ, Finset.mem_filter, true_and, not_le, List.get_eq_getElem,
+      forall_const]
+    intro x hx
+    omega
+
+lemma dominates_of_forall_lt_max {L L' : List ℕ} (h : ∀ r < max L.length L'.length,
     ∑ i : Fin L.length with i.1 ≤ r, L.get i ≤
     ∑ i : Fin L'.length with i.1 ≤ r, L'.get i) : L ⊴ L' := by
   by_cases hle : max L.length L'.length = 0
@@ -127,15 +149,46 @@ lemma dominates_of_forall_le_max {L L' : List ℕ} (h : ∀ r < max L.length L'.
     rw [sum_with_eq_sum_with hrL hmL, sum_with_eq_sum_with hrL' hmL']
     exact h
 
-lemma sum_with_eq_sum_univ {L : List ℕ} (r : ℕ) (h : r ≥ L.length - 1) :
-    ∑ i, L.get i = ∑ i with i.1 ≤ r, L.get i := by
-  symm
-  refine Finset.sum_subset ?_ ?_
-  · simp
-  · simp only [Finset.mem_univ, Finset.mem_filter, true_and, not_le, List.get_eq_getElem,
-      forall_const]
-    intro x hx
+lemma dominates_of_forall_lt_length {L L' : List ℕ} (h : ∀ r < L.length,
+    ∑ i : Fin L.length with i.1 ≤ r, L.get i ≤
+    ∑ i : Fin L'.length with i.1 ≤ r, L'.get i) (hle : min L.length L'.length ≠ 0) :
+    L ⊴ L' := by
+  intro r
+  by_cases hr : r < L.length
+  · exact h r hr
+  · push_neg at hr
+    have hr : r ≥ L.length - 1 := by omega
+    rw [sum_with_eq_sum_with hr (by rfl)]
+    specialize h (L.length - 1) (by omega)
+    refine le_trans h ?_
+    refine Finset.sum_le_sum_of_subset ?_
+    intro x
+    simp
     omega
+
+lemma dominates_of_forall_lt_min {L L' : List ℕ} (h : ∀ r < min L.length L'.length,
+    ∑ i : Fin L.length with i.1 ≤ r, L.get i ≤
+    ∑ i : Fin L'.length with i.1 ≤ r, L'.get i) (hs : L.sum = L'.sum) : L ⊴ L' := by
+  by_cases hle : min L.length L'.length = 0
+  · rw [min_eq_iff, List.length_eq_zero_iff, List.length_eq_zero_iff] at hle
+    rcases hle with hL | hL'
+    · rw [hL.1]
+      exact dominates_nil
+    · rw [hL'.1]
+      rw [hL'.1, List.sum_nil] at hs
+      exact nil_dominates_of_sum_eq_zero hs
+
+  refine dominates_of_forall_lt_length ?_ hle
+
+  intro r hr'
+  by_cases hr : r < min L.length L'.length
+  · exact h r hr
+  · push_neg at hr
+    conv => rhs; rw [← sum_with_eq_sum_univ _ (by omega)]
+    simp only [List.get_eq_getElem]
+    rw [Fin.sum_univ_getElem, ← hs, ← Fin.sum_univ_getElem]
+    refine Finset.sum_le_sum_of_subset ?_
+    simp
 
 lemma sum_le_sum_of_dominates {L L' : List ℕ} (hd : L ⊴ L') : L.sum ≤ L'.sum := by
   rw [← Fin.sum_univ_getElem, ← Fin.sum_univ_getElem]
@@ -155,7 +208,7 @@ lemma singleton_dominates_singleton {a b : ℕ} : ([a] ⊴ [b]) ↔ a ≤ b := b
     simp at h
     exact h
   · intro h
-    refine dominates_of_forall_le_max ?_
+    refine dominates_of_forall_lt_max ?_
     simp [h]
 
 lemma singleton_dominates_pair {a b c : ℕ} : ([a, b] ⊴ [c]) ↔ a + b ≤ c := by
@@ -165,7 +218,7 @@ lemma singleton_dominates_pair {a b c : ℕ} : ([a, b] ⊴ [c]) ↔ a + b ≤ c 
     simp at h
     exact h
   · intro h
-    refine dominates_of_forall_le_max ?_
+    refine dominates_of_forall_lt_max ?_
     simp
     intro r hr
     interval_cases r
@@ -179,7 +232,7 @@ lemma singleton_dominates_triple {a b c d : ℕ} : ([a, b, c] ⊴ [d]) ↔ a + b
     simp [← add_assoc] at h
     exact h
   · intro h
-    refine dominates_of_forall_le_max ?_
+    refine dominates_of_forall_lt_max ?_
     simp
     intro r hr
     interval_cases r
@@ -196,7 +249,7 @@ lemma pair_dominates_singleton {a b c : ℕ} : ([a] ⊴ [b, c]) ↔ a ≤ b := b
     refine get_zero_ge_of_dominates h ?_ ?_
     all_goals simp
   · intro h
-    refine dominates_of_forall_le_max ?_
+    refine dominates_of_forall_lt_max ?_
     simp
     intro r hr
     interval_cases r
@@ -213,7 +266,7 @@ lemma pair_dominates_pair {a b c d : ℕ} : ([a, b] ⊴ [c, d]) ↔ a ≤ c ∧ 
       simp at h
       exact h
   · intro ⟨h₁, h₂⟩
-    refine dominates_of_forall_le_max ?_
+    refine dominates_of_forall_lt_max ?_
     simp
     intro r hr
     interval_cases r
@@ -231,7 +284,7 @@ lemma pair_dominates_triple {a b c d e : ℕ} : ([a, b, c] ⊴ [d, e]) ↔
       rw [add_assoc]
       exact h
   · intro ⟨h₁, h₂⟩
-    refine dominates_of_forall_le_max ?_
+    refine dominates_of_forall_lt_max ?_
     simp
     intro r hr
     interval_cases r
@@ -245,7 +298,7 @@ lemma triple_dominates_singleton {a b c d : ℕ} : ([a] ⊴ [b, c, d]) ↔ a ≤
     refine get_zero_ge_of_dominates h ?_ ?_
     all_goals simp
   · intro h
-    refine dominates_of_forall_le_max ?_
+    refine dominates_of_forall_lt_max ?_
     simp
     intro r hr
     interval_cases r
@@ -264,7 +317,7 @@ lemma triple_dominates_pair {a b c d e : ℕ} : ([a, b] ⊴ [c, d, e]) ↔
     · refine sum_two_le_of_dominates h ?_ ?_
       all_goals simp
   · intro ⟨h₁, h₂⟩
-    refine dominates_of_forall_le_max ?_
+    refine dominates_of_forall_lt_max ?_
     simp
     intro r hr
     interval_cases r
@@ -284,7 +337,7 @@ lemma triple_dominates_triple {a b c d e f : ℕ} : ([a, b, c] ⊴ [d, e, f]) �
     · refine get_zero_ge_of_dominates h ?_ ?_
       all_goals simp
   · intro ⟨h₁, h₂, h₃⟩
-    refine dominates_of_forall_le_max ?_
+    refine dominates_of_forall_lt_max ?_
     simp
     intro r hr
     interval_cases r

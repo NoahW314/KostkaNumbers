@@ -1,8 +1,8 @@
 import Mathlib
-import KostkaNumbers.Util
-import KostkaNumbers.Content
+import KostkaNumbers.Basic
+import KostkaNumbers.ComputationProof.RowColEq
 
-open YoungDiagram SemistandardYoungTableau
+open Kostka YoungDiagram SemistandardYoungTableau
 
 def horizontalDiagram (n : ℕ) := ofRowLens [n] <| List.sorted_singleton n
 
@@ -80,52 +80,72 @@ lemma highestWeight_horizontal_content (n : ℕ) :
 
 lemma content_horizontal_ofMultiset (μ : Multiset ℕ) :
     (horizontal_ofMultiset μ).content = μ := by
-  apply Multiset.induction_on_with_le μ
-  · simp [content, Finset.eq_empty_iff_forall_notMem]
-  intro n s _ _ hn hs
-  simp [content, horizontalDiagram, ofRowLens, YoungDiagram.cellsOfRowLens]
+  unfold content
+  let γ := horizontalDiagram μ.card
+  have hγ : γ.cells = (γ.row 0) := by
+    ext i
+    simp only [horizontalDiagram, mem_cells, mem_ofRowLens, List.getElem_singleton,
+      List.length_cons, List.length_nil, zero_add, Nat.lt_one_iff, exists_prop,
+      mem_row_iff, γ]
+    conv => rhs ; rw [And.comm]; simp only [and_self_left]
+  rw [hγ, ← map_row, Multiset.map_coe, ← List.ofFn_eq_map]
+  conv => rhs; rw [← Multiset.coe_toList μ]
+  suffices (List.ofFn (fun k : Fin (γ.rowLen 0) ↦ (horizontal_ofMultiset μ) 0 k)) =
+      μ.toList.mergeSort (· ≤ ·) by
+    rw [this, Multiset.coe_eq_coe]
+    exact List.mergeSort_perm _ _
+  have hc : γ.rowLen 0 = μ.card := by
+    rw [rowLen_eq_card, ← hγ]
+    simp [γ]
+  have hc2 : μ.card = (μ.toList.mergeSort (· ≤ ·)).length := by simp
+  simp [hc, horizontal_ofMultiset, DFunLike.coe]
+  conv => rhs; rw [← List.ofFn_getElem (μ.toList.mergeSort (· ≤ ·))]
   congr
-  · apply horizontal_ofMultiset_cons_largest_end s hn
-  symm; nth_rw 1 [← hs]; symm
-  simp [content, horizontalDiagram, ofRowLens, YoungDiagram.cellsOfRowLens]
-  apply Multiset.map_congr rfl
-  intro x hx; rw [Multiset.mem_range] at hx
-  exact horizontal_ofMultiset_cons_largest s hn x hx
+  exact (Fin.heq_fun_iff hc2).mpr (congrFun rfl)
 
 variable {γ : YoungDiagram}
 
 lemma eq_horizontal_ofMultiset_content {n : ℕ}
     (T : SemistandardYoungTableau γ) (h : γ = horizontalDiagram n) :
     T.entry = (horizontal_ofMultiset (T.content)).entry := by
-  ext i j
-  by_cases hij : ¬(j < T.content.card ∧ i = 0)
-  · simp only [horizontal_ofMultiset, hij, reduceDIte]
-    apply T.zeros
-    rw [h]
-    simp only [mem_horizontalDiagram]
-    rw [content_card_eq_card, h, horizontalDiagram_card] at hij
-    rw [And.comm]; exact hij
-  push_neg at hij
-  simp only [horizontal_ofMultiset, hij, and_true, reduceDIte]
-  rw [List.getElem_map_range n (fun j => T.entry 0 j)]
-  · congr
-    apply List.eq_of_perm_of_sorted ?_ ?_ (List.sorted_mergeSort' _ _)
-    · apply List.Perm.symm
-      apply List.Perm.trans (List.mergeSort_perm _ _)
-      rw [← Multiset.coe_eq_coe, Multiset.coe_toList]
-      simp [content, h, horizontalDiagram, ofRowLens, YoungDiagram.cellsOfRowLens]
-      rw [← Multiset.map_coe, Multiset.coe_range]
-    · unfold List.Sorted
-      rw [List.pairwise_map, List.pairwise_iff_getElem]
-      simp
-      intro i j hi hj hij
-      apply T.row_weak hij
-      simp [h, hj]
-  · simp [content_card_eq_card, h, horizontalDiagram_card] at hij
-    exact hij.1
-  · simp
+  have hn : n = T.content.card := by rw [content_card_eq_card, h, horizontalDiagram_card]
+  rw [hn] at h
+  refine eq_of_missing_row'' T (horizontal_ofMultiset (T.content)) h ?_ 0 ?_
+  · rw [content_horizontal_ofMultiset]
+  · intro i hi j
+    rw [T.zeros, (horizontal_ofMultiset T.content).zeros]
+    · simp [hi]
+    · rw [h]
+      simp [hi]
 
 lemma eq_horizontal_ofMultiset_content' {n : ℕ}
     (T : SemistandardYoungTableau (horizontalDiagram n)) :
     T.entry = (horizontal_ofMultiset (T.content)).entry := by
   exact eq_horizontal_ofMultiset_content T rfl
+
+
+
+theorem kostka_horizontal (μ : Multiset ℕ) :
+    kostkaNumber (horizontalDiagram μ.sum) μ = 1 := by
+  unfold kostkaNumber
+  rw [Nat.card_eq_one_iff_exists, ← Multiset.fromCounts_card]
+  use ⟨horizontal_ofMultiset μ.fromCounts, by
+    rw [Set.mem_setOf, content_horizontal_ofMultiset]⟩
+  intro ⟨T, hT⟩
+  rw [Subtype.mk.injEq]; rw [Set.mem_setOf] at hT
+  ext i j; simp only [DFunLike.coe]
+  rw [eq_horizontal_ofMultiset_content' T]
+  congr
+
+
+theorem kostka_horizontal' (n : ℕ) (μ : Multiset ℕ) :
+    kostkaNumber (horizontalDiagram n) μ = 1 ↔ μ.sum = n := by
+  constructor; swap
+  · intro h
+    rw [← h]
+    exact kostka_horizontal μ
+  contrapose!
+  intro h; symm at h
+  rw [kostka_ne_card]
+  · exact zero_ne_one
+  simp [h]

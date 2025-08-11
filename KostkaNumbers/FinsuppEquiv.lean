@@ -77,4 +77,11 @@ def equivRowLens : YoungDiagram ≃ {f : ℕ →₀ ℕ | Antitone f} where
     simp only [Set.coe_setOf, Set.mem_setOf_eq, Subtype.mk.injEq]
     exact rowLens'_ofRowLens'_eq_self f hf
 
+
+@[simp] lemma rowLens'_eq_zero {γ : YoungDiagram} {i : ℕ} (hi : ¬ i < γ.colLen 0) :
+    γ.rowLens' i = 0 := by
+  rw [← mem_iff_lt_colLen, mem_iff_lt_rowLen, Nat.pos_iff_ne_zero] at hi
+  push_neg at hi
+  exact hi
+
 end YoungDiagram

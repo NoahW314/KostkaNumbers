@@ -1,15 +1,10 @@
 import Mathlib
-import KostkaNumbers.Recursion
+import KostkaNumbers.Util.MinMaxEl
 
 
 /-
 Utility Theorems
 -/
-
-lemma card_le_sum (μ : Multiset ℕ) (hp : ∀ x ∈ μ, x > 0) : μ.card ≤ μ.sum := by
-  let hc := Multiset.card_nsmul_le_sum hp
-  rw [Nat.succ_eq_add_one, zero_add, smul_eq_mul, mul_one] at hc
-  exact hc
 
 lemma ne_zero_of_sum_ne_zero {μ : Multiset ℕ} {n : ℕ} (h : μ.sum = n)
     (hn : n ≠ 0) : μ ≠ 0 := by
@@ -25,11 +20,6 @@ lemma pos_of_max_el_erase {μ : Multiset ℕ} (hμ : μ ≠ 0) (hp : ∀ x ∈ �
     ∀ x ∈ (μ.erase (max_el μ hμ)), x > 0 := by
   intro x hx
   exact hp x (Multiset.mem_of_mem_erase hx)
-
-lemma cons_erase_max_el {μ : Multiset ℕ} (hμ : μ ≠ 0) : μ =
-    (max_el μ hμ) ::ₘ (μ.erase (max_el μ hμ)) := by
-  symm
-  exact Multiset.cons_erase (max_el_mem hμ)
 
 lemma cons_lt_max_el {μ ν : Multiset ℕ} {a n : ℕ} {hμ : μ ≠ 0}
     (h : max_el μ hμ = n) (ha : n < a) : μ.erase n ≠ a ::ₘ ν := by
@@ -56,7 +46,7 @@ Enumeration of the partitions for n ≤ 6
 
 lemma partition0 (μ : Multiset ℕ) (h : μ.sum = 0) (hp : ∀ x ∈ μ, x > 0) :
     μ = 0 := by
-  apply card_le_sum at hp
+  apply Multiset.card_le_sum at hp
   rw [h, Nat.le_zero, Multiset.card_eq_zero] at hp
   exact hp
 

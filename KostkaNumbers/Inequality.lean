@@ -23,8 +23,7 @@ lemma kostka_ineq_hook {n : ℕ} (hn : n ≥ 2) (hγ : γ = hookDiagram n)
     (μ.card - 1) * kostkaNumber γ (Multiset.replicate n 1) := by
   have hnc : γ.card = n := by rw [hγ, hookDiagram_card]
   rw [hγ]; nth_rw 2 [← hnc]
-  rw [h, kostka_hook, Multiset.remove_of_notMem μ 0 h0, mul_comm,
-    kostka_hook_replicate n hn]
+  rw [h, kostka_hook μ h0, mul_comm, kostka_hook_replicate n hn]
   rw [← h, hnc]; exact hn
 
 lemma rowLens_eq_iff {γ γ' : YoungDiagram} : γ.rowLens = γ'.rowLens ↔ γ = γ' := by

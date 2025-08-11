@@ -41,6 +41,8 @@ theorem col_sorted (T : SemistandardYoungTableau γ) (i j : ℕ) (hi : i < γ.co
   exact hi2
 
 
+
+
 lemma map_row (T : SemistandardYoungTableau γ) {i : ℕ} :
     Multiset.map (fun j : Fin (γ.rowLen i) ↦ T i j.1)
       (Multiset.ofList (List.finRange (γ.rowLen i))) =
@@ -96,26 +98,10 @@ lemma map_col (T : SemistandardYoungTableau γ) {j : ℕ} :
     simp [e]
 
 
-lemma cells_add_sub_row (i : ℕ) : (γ.cells.val - (γ.row i).val) + (γ.row i).val = γ.cells.val := by
-  refine Multiset.add_sub_cancel ?_
-  rw [Finset.val_le_iff]
-  intro x
-  rw [mem_row_iff, mem_cells]
-  intro hx
-  exact hx.1
 
-lemma cells_add_sub_col (j : ℕ) : (γ.cells.val - (γ.col j).val) + (γ.col j).val = γ.cells.val := by
-  refine Multiset.add_sub_cancel ?_
-  rw [Finset.val_le_iff]
-  intro x
-  rw [mem_col_iff, mem_cells]
-  intro hx
-  exact hx.1
-
-
-
-theorem eq_of_missing_row (T T' : SemistandardYoungTableau γ) (hc : T.content = T'.content)
-    (i₀ : ℕ) (h : ∀ i ≠ i₀, ∀ j, T i j = T' i j) : T = T' := by
+theorem eq_of_missing_row'' {γ γ' : YoungDiagram} (T : SemistandardYoungTableau γ)
+    (T' : SemistandardYoungTableau γ') (hγ : γ = γ') (hc : T.content = T'.content) (i₀ : ℕ)
+    (h : ∀ i ≠ i₀, ∀ j, T i j = T' i j) : T.entry = T'.entry := by
   ext i j
   by_cases hi : i ≠ i₀
   · exact h i hi j
@@ -123,7 +109,8 @@ theorem eq_of_missing_row (T T' : SemistandardYoungTableau γ) (hc : T.content =
   simp only [content] at hc
   by_cases hij : (i, j) ∈ γ
   · rw [mem_iff_lt_rowLen] at hij
-    rw [row_sorted T i j hij, row_sorted T' i j hij]
+    let hij' := hij; rw [hγ] at hij'
+    rw [to_fun_eq_coe, row_sorted T i j hij, to_fun_eq_coe, row_sorted T' i j hij']
     congr 1
     refine List.eq_of_perm_of_sorted ?_ (List.sorted_mergeSort' _ _) (List.sorted_mergeSort' _ _)
     refine List.Perm.trans (List.mergeSort_perm _ _) ?_
@@ -131,25 +118,35 @@ theorem eq_of_missing_row (T T' : SemistandardYoungTableau γ) (hc : T.content =
     refine List.Perm.trans (List.mergeSort_perm _ _) ?_
     rw [← Multiset.coe_eq_coe, List.ofFn_eq_map, List.ofFn_eq_map, ← Multiset.map_coe,
       ← Multiset.map_coe, map_row, map_row]
-    rw [← cells_add_sub_row i] at hc
+    nth_rw 2 [← cells_add_sub_row i] at hc
+    nth_rw 1 [← cells_add_sub_row i] at hc
     simp at hc
     suffices Multiset.map (fun x ↦ T x.1 x.2) (γ.cells.val - (γ.row i).val) =
-        Multiset.map (fun x ↦ T' x.1 x.2) (γ.cells.val - (γ.row i).val) by
+        Multiset.map (fun x ↦ T' x.1 x.2) (γ'.cells.val - (γ'.row i).val) by
       rw [this, add_right_inj] at hc
       symm; exact hc
+    simp [← hγ]
     refine Multiset.map_congr rfl ?_
     intro (a, b) hab
     simp only
-    by_cases hγ : (a, b) ∈ γ
+    by_cases habγ : (a, b) ∈ γ
     · rw [← Multiset.count_pos, Multiset.count_sub, tsub_pos_iff_lt,
         Multiset.count_eq_of_nodup (γ.row i).nodup,
         Multiset.count_eq_of_nodup γ.cells.nodup] at hab
-      simp only [Finset.mem_val, mem_row_iff, hγ, true_and, mem_cells, ↓reduceIte, Nat.lt_one_iff,
+      simp only [Finset.mem_val, mem_row_iff, habγ, true_and, mem_cells, ↓reduceIte, Nat.lt_one_iff,
         ite_eq_right_iff, one_ne_zero, imp_false] at hab
       rw [hi] at hab
       exact h a hab b
-    · rw [T.zeros hγ, T'.zeros hγ]
-  · rw [T.zeros hij, T'.zeros hij]
+    · let habγ' := habγ; rw [hγ] at habγ'
+      rw [T.zeros habγ, T'.zeros habγ']
+  · let hij' := hij; rw [hγ] at hij'
+    rw [to_fun_eq_coe, to_fun_eq_coe, T.zeros hij, T'.zeros hij']
+
+theorem eq_of_missing_row (T T' : SemistandardYoungTableau γ) (hc : T.content = T'.content)
+    (i₀ : ℕ) (h : ∀ i ≠ i₀, ∀ j, T i j = T' i j) : T = T' := by
+  suffices T.entry = T'.entry by
+    exact ext fun i ↦ congrFun (congrFun this i)
+  exact eq_of_missing_row'' T T' rfl hc i₀ h
 
 theorem eq_of_missing_row' (T T' : SemistandardYoungTableau γ) (hc : T.content = T'.content)
     (i₀ : ℕ) {f : ℕ → ℕ → ℕ} (h : ∀ i ≠ i₀, ∀ j, T i j = f i j)
@@ -159,8 +156,10 @@ theorem eq_of_missing_row' (T T' : SemistandardYoungTableau γ) (hc : T.content 
     rw [h i hi j, h' i hi j]
   exact eq_of_missing_row T T' hc i₀ h2
 
-theorem eq_of_missing_col (T T' : SemistandardYoungTableau γ) (hc : T.content = T'.content)
-    (j₀ : ℕ) (h : ∀ i, ∀ j ≠ j₀, T i j = T' i j) : T = T' := by
+
+theorem eq_of_missing_col'' {γ γ' : YoungDiagram} (T : SemistandardYoungTableau γ)
+    (T' : SemistandardYoungTableau γ') (hγ : γ = γ') (hc : T.content = T'.content) (j₀ : ℕ)
+    (h : ∀ i, ∀ j ≠ j₀, T i j = T' i j) : T.entry = T'.entry := by
   ext i j
   by_cases hj : j ≠ j₀
   · exact h i j hj
@@ -168,7 +167,8 @@ theorem eq_of_missing_col (T T' : SemistandardYoungTableau γ) (hc : T.content =
   simp only [content] at hc
   by_cases hij : (i, j) ∈ γ
   · rw [mem_iff_lt_colLen] at hij
-    rw [col_sorted T i j hij, col_sorted T' i j hij]
+    let hij' := hij; rw [hγ] at hij'
+    rw [to_fun_eq_coe, col_sorted T i j hij, to_fun_eq_coe, col_sorted T' i j hij']
     congr 1
     refine List.eq_of_perm_of_sorted ?_ (List.sorted_mergeSort' _ _) (List.sorted_mergeSort' _ _)
     refine List.Perm.trans (List.mergeSort_perm _ _) ?_
@@ -176,25 +176,36 @@ theorem eq_of_missing_col (T T' : SemistandardYoungTableau γ) (hc : T.content =
     refine List.Perm.trans (List.mergeSort_perm _ _) ?_
     rw [← Multiset.coe_eq_coe, List.ofFn_eq_map, List.ofFn_eq_map, ← Multiset.map_coe,
       ← Multiset.map_coe, map_col, map_col]
-    rw [← cells_add_sub_col j] at hc
+    nth_rw 2 [← cells_add_sub_col j] at hc
+    nth_rw 1 [← cells_add_sub_col j] at hc
     simp at hc
     suffices Multiset.map (fun x ↦ T x.1 x.2) (γ.cells.val - (γ.col j).val) =
-        Multiset.map (fun x ↦ T' x.1 x.2) (γ.cells.val - (γ.col j).val) by
+        Multiset.map (fun x ↦ T' x.1 x.2) (γ'.cells.val - (γ'.col j).val) by
       rw [this, add_right_inj] at hc
       symm; exact hc
+    simp [← hγ]
     refine Multiset.map_congr rfl ?_
     intro (a, b) hab
     simp only
-    by_cases hγ : (a, b) ∈ γ
+    by_cases habγ : (a, b) ∈ γ
     · rw [← Multiset.count_pos, Multiset.count_sub, tsub_pos_iff_lt,
         Multiset.count_eq_of_nodup (γ.col j).nodup,
         Multiset.count_eq_of_nodup γ.cells.nodup] at hab
-      simp only [Finset.mem_val, mem_col_iff, hγ, true_and, mem_cells, ↓reduceIte, Nat.lt_one_iff,
+      simp only [Finset.mem_val, mem_col_iff, habγ, true_and, mem_cells, ↓reduceIte, Nat.lt_one_iff,
         ite_eq_right_iff, one_ne_zero, imp_false] at hab
       rw [hj] at hab
       exact h a b hab
-    · rw [T.zeros hγ, T'.zeros hγ]
-  · rw [T.zeros hij, T'.zeros hij]
+    · let habγ' := habγ; rw [hγ] at habγ'
+      rw [T.zeros habγ, T'.zeros habγ']
+  · let hij' := hij; rw [hγ] at hij'
+    rw [to_fun_eq_coe, to_fun_eq_coe, T.zeros hij, T'.zeros hij']
+
+theorem eq_of_missing_col (T T' : SemistandardYoungTableau γ) (hc : T.content = T'.content)
+    (j₀ : ℕ) (h : ∀ i, ∀ j ≠ j₀, T i j = T' i j) : T = T' := by
+  suffices T.entry = T'.entry by
+    exact ext fun i ↦ congrFun (congrFun this i)
+  exact eq_of_missing_col'' T T' rfl hc j₀ h
+
 
 theorem eq_of_missing_col' (T T' : SemistandardYoungTableau γ) (hc : T.content = T'.content)
     (j₀ : ℕ) {f : ℕ → ℕ → ℕ} (h : ∀ i, ∀ j ≠ j₀, T i j = f i j)

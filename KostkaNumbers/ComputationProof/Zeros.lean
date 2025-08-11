@@ -1,9 +1,8 @@
 import Mathlib
 import KostkaNumbers.Content
-import KostkaNumbers.Recursion
 
 
-open YoungDiagram SemistandardYoungTableau Kostka
+open YoungDiagram SemistandardYoungTableau
 
 /-
 This file proves that the zeros in the tableau have to be located in the first
@@ -18,25 +17,6 @@ lemma zero_of_left_zero (T : SemistandardYoungTableau γ) {i j1 j2 : ℕ} (hj : 
     (hij : (i, j2) ∈ γ) (h : T i j2 = 0) : T i j1 = 0 := by
   rw [← Nat.le_zero, ← h]
   exact T.row_weak_of_le hj hij
-
-lemma ge_sort_eq_reverse_le_sort (L : List ℕ) : L.mergeSort (· ≥ ·) =
-    (L.mergeSort (· ≤ ·)).reverse := by
-  refine List.eq_of_perm_of_sorted ?_ (List.sorted_mergeSort' _ _) ?_
-  · rw [← Multiset.coe_eq_coe, Multiset.coe_reverse, Multiset.coe_eq_coe]
-    refine List.Perm.trans (List.mergeSort_perm _ _) ?_
-    refine List.Perm.symm ?_
-    refine List.Perm.trans (List.mergeSort_perm _ _) ?_
-    rw [← Multiset.coe_eq_coe]
-  · rw [List.Sorted, List.pairwise_reverse, ← List.Sorted]
-    simp only [ge_iff_le, List.sorted_mergeSort']
-
-lemma max_el_eq_get_zero_of_ge_sort (μ : Multiset ℕ) (hμ : μ ≠ 0) :
-    max_el μ hμ = (μ.toList.mergeSort (· ≥ ·))[0]'(by simp [Nat.pos_iff_ne_zero, hμ]) := by
-  unfold max_el
-  rw [List.getLast_eq_head_reverse, List.head_eq_getElem]
-  congr
-  nth_rw 1 [← Multiset.coe_toList μ, ge_sort_eq_reverse_le_sort]
-  congr
 
 
 def content_zero_equiv (i j : ℕ) : {x : ℕ × ℕ | x.1 = i ∧ x.2 ≤ j} → Fin (j+1) :=
@@ -67,7 +47,7 @@ lemma content_zero_card (i j : ℕ) : {x : ℕ × ℕ | x.1 = i ∧ x.2 ≤ j}.t
 
 
 theorem entry_zero_of_lt_max_el (T : SemistandardYoungTableau γ) {μ : Multiset ℕ} (hμ : μ ≠ 0)
-    (h0 : 0 ∉ μ) (hc : T.content = μ.fromCounts) {j : ℕ} (hij : (0, j) ∈ γ)
+    (hc : T.content = μ.fromCounts) {j : ℕ} (hij : (0, j) ∈ γ)
     (hj : j < max_el μ hμ) : T 0 j = 0 := by
   by_cases hj0 : j = 0
   · rw [hj0]
@@ -80,7 +60,7 @@ theorem entry_zero_of_lt_max_el (T : SemistandardYoungTableau γ) {μ : Multiset
   apply_fun Multiset.count 0 at hc
   contrapose! hc
   refine ne_of_lt ?_
-  rw [content, Multiset.count_map, Multiset.count_fromCounts ?_ h0,
+  rw [content, Multiset.count_map, Multiset.count_fromCounts ?_,
     ← max_el_eq_get_zero_of_ge_sort μ hμ]
   swap
   · rw [Nat.pos_iff_ne_zero, ne_eq, Multiset.card_eq_zero]
@@ -111,7 +91,7 @@ theorem entry_zero_of_lt_max_el (T : SemistandardYoungTableau γ) {μ : Multiset
     exact T.row_weak_of_le hjb hab
 
 theorem lt_max_el_of_entry_zero (T : SemistandardYoungTableau γ) {μ : Multiset ℕ} (hμ : μ ≠ 0)
-    (h0 : 0 ∉ μ) (hc : T.content = μ.fromCounts) {i j : ℕ} (hij : (i, j) ∈ γ)
+    (hc : T.content = μ.fromCounts) {i j : ℕ} (hij : (i, j) ∈ γ)
     (h : T i j = 0) : i = 0 ∧ j < max_el μ hμ := by
   constructor
   · rw [← Nat.le_zero, ← h]
@@ -120,7 +100,7 @@ theorem lt_max_el_of_entry_zero (T : SemistandardYoungTableau γ) {μ : Multiset
     suffices Multiset.count 0 T.content ≠ Multiset.count 0 μ.fromCounts by
       contrapose! this
       rw [this]
-    rw [Multiset.count_fromCounts ?_ h0, ← max_el_eq_get_zero_of_ge_sort μ hμ]
+    rw [Multiset.count_fromCounts ?_, ← max_el_eq_get_zero_of_ge_sort μ hμ]
     · refine ne_of_gt ?_
       simp [content, Multiset.count_map]
       suffices {x : ℕ × ℕ | x.1 = i ∧ x.2 ≤ j}.toFinset ⊆
@@ -145,11 +125,11 @@ theorem lt_max_el_of_entry_zero (T : SemistandardYoungTableau γ) {μ : Multiset
       exact hμ
 
 theorem zero_iff_of_mem (T : SemistandardYoungTableau γ) {μ : Multiset ℕ} (hμ : μ ≠ 0)
-    (h0 : 0 ∉ μ) (hc : T.content = μ.fromCounts) {i j : ℕ} (hij : (i, j) ∈ γ) :
+    (hc : T.content = μ.fromCounts) {i j : ℕ} (hij : (i, j) ∈ γ) :
     T i j = 0 ↔ i = 0 ∧ j < max_el μ hμ := by
   constructor
-  · exact lt_max_el_of_entry_zero T hμ h0 hc hij
+  · exact lt_max_el_of_entry_zero T hμ hc hij
   · intro ⟨hi, hj⟩
     rw [hi] at hij
     rw [hi]
-    exact entry_zero_of_lt_max_el T hμ h0 hc hij hj
+    exact entry_zero_of_lt_max_el T hμ hc hij hj
