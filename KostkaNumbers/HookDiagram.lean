@@ -52,6 +52,14 @@ def hookDiagram (n : ℕ) := if h0 : n = 0 then (⊥ : YoungDiagram) else
   simp only [mem_cells, mem_hookDiagram (n + 1) (by omega), add_tsub_cancel_right, Or.comm,
     Finset.mem_union, mem_horizontalDiagram, Finset.mem_singleton, Prod.mk.injEq]
 
+@[simp] lemma hookDiagram_rowLens {n : ℕ} (hn : n ≥ 2) :
+    (hookDiagram n).rowLens = [n-1, 1] := by
+  have h0 : n ≠ 0 := by positivity
+  have h1 : n ≠ 1 := by omega
+  simp only [hookDiagram, h0, ↓reduceDIte, h1]
+  rw [rowLens_ofRowLens_eq_self]
+  simp; omega
+
 
 -- m is the entry in the second row. accompied by a proof that m is greater than
 --   the smallest element of M

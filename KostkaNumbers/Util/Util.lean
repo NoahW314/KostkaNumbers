@@ -78,6 +78,32 @@ lemma ge_sort_eq_reverse_le_sort (L : List ℕ) : L.mergeSort (· ≥ ·) =
     simp only [ge_iff_le, List.sorted_mergeSort']
 
 
+
+lemma forall_mem_eq_one_of_length_eq_sum {L : List ℕ} (h : L.length = L.sum)
+    (hp : ∀ x ∈ L, x > 0) : ∀ x ∈ L, x = 1 := by
+  contrapose! h
+  obtain ⟨x, hxL, hx⟩ := h
+  let hpx := hp x hxL
+  rw [List.mem_iff_getElem] at hxL
+  obtain ⟨n, ⟨hn, hnx⟩⟩ := hxL
+  refine ne_of_lt ?_
+  rw [← Fin.sum_univ_getElem, ← Finset.sum_erase_add _ _ (Finset.mem_univ ⟨n, hn⟩)]
+  simp only [hnx]
+  have hlen : L.length = L.length - 1 + 1 := by omega
+  nth_rw 1 [hlen]
+  suffices L.length - 1 ≤ ∑ i ∈ Finset.univ.erase (⟨n, hn⟩ : Fin (L.length)),
+    L[i.1] by omega
+  refine le_trans ?_ (Finset.card_nsmul_le_sum _ _ 1 ?_)
+  · simp
+  · intro y hy
+    refine hp L[y.1] ?_
+    exact List.getElem_mem _
+
+variable {α : Type*}
+lemma sorted_ge_replicate (n : ℕ) (a : α) [Preorder α] :
+    List.Sorted (· ≥ ·) (List.replicate n a) := by
+  simp [Sorted, pairwise_replicate]
+
 end List
 
 
@@ -120,12 +146,6 @@ lemma range_eq_dedup (M : Multiset ℕ) {m : ℕ} (hmem : ∀ n < m, n ∈ M) (h
     rw [mem_range] at hn; push_neg at hn
     exact hnmem n hn
 
-lemma sub_sub_of_sub {s t : Multiset ℕ} (h : t ≤ s) : s - (s - t) = t := by
-  ext x
-  rw [count_sub, count_sub]
-  apply Multiset.count_le_of_le x at h
-  omega
-
 lemma replicate_count_le {s : Multiset ℕ} {a : ℕ} :
     Multiset.replicate (Multiset.count a s) a ≤ s := by
   rw [Multiset.le_iff_count]
@@ -155,6 +175,37 @@ lemma erase_eq_zero_iff {μ : Multiset ℕ} (hμ : μ ≠ 0) (a : ℕ) :
   · intro h
     rw [h]
     exact Multiset.erase_singleton a
+
+
+lemma count_sort {M : Multiset ℕ} {n : ℕ} :
+    List.count n (sort (· ≥ ·) M) = count n M := by
+  rw [← Multiset.coe_count]
+  congr
+  simp
+
+lemma sort_eq_replicate_iff {μ : Multiset ℕ} {n a : ℕ} :
+    (Multiset.sort (· ≥ ·) μ) = List.replicate n a ↔ μ = Multiset.replicate n a := by
+  constructor
+  · intro h
+    ext x
+    apply_fun List.count x at h
+    rw [Multiset.count_sort] at h
+    rw [h, ← Multiset.coe_count, Multiset.coe_replicate]
+  · intro h
+    rw [h, ← Multiset.coe_replicate, Multiset.coe_sort]
+    refine List.eq_of_perm_of_sorted (List.mergeSort_perm _ _) (List.sorted_mergeSort' _ _) ?_
+    exact List.sorted_ge_replicate n a
+
+
+-- Add to Mathlib
+
+lemma erase_replicate {n a : ℕ} : (Multiset.replicate n a).erase a =
+    Multiset.replicate (n - 1) a := by
+  ext b
+  by_cases hb : b = a
+  · simp [hb, count_erase_self]
+  · let hb2 := hb; push_neg at hb2; symm at hb2
+    simp [count_erase_of_ne hb, count_replicate, hb2]
 
 @[simp] lemma sort_sum {α : Type*} (r : α → α → Prop) [DecidableRel r] [IsTrans α r]
     [IsAntisymm α r] [IsTotal α r] [AddCommMonoid α] (s : Multiset α) :

@@ -22,32 +22,37 @@ lemma antitone_sub_of_antitone (f g : ℕ →₀ ℕ)
     rw [Finsupp.coe_tsub, Pi.sub_apply, Pi.sub_apply]
     exact h j
 
+-- references:
+-- KostkaPos
+-- Recursion
+-- SumInequality
 
+open Classical in
 noncomputable
-def sub (γ : YoungDiagram) (f : ℕ →₀ ℕ)
-  (h : ∀ i, γ.rowLens' i - f i ≥ γ.rowLens' (i + 1) - (f (i + 1))) : YoungDiagram
-  := ofRowLens' (γ.rowLens' - f) (antitone_sub_of_antitone γ.rowLens' f h)
+def sub (γ : YoungDiagram) (f : ℕ →₀ ℕ) : YoungDiagram :=
+  if h : ∀ i, γ.rowLens' i - f i ≥ γ.rowLens' (i + 1) - (f (i + 1))
+  then ofRowLens' (γ.rowLens' - f) (antitone_sub_of_antitone γ.rowLens' f h) else ⊥
 
 @[simp] lemma mem_sub (γ : YoungDiagram) (x : ℕ × ℕ) {f : ℕ →₀ ℕ}
-    {h : ∀ i, γ.rowLens' i - f i ≥ γ.rowLens' (i + 1) - (f (i + 1))} :
-    x ∈ γ.sub f h ↔ x.2 < γ.rowLens' x.1 - f x.1 := by
-  simp [sub]
+    (h : ∀ i, γ.rowLens' i - f i ≥ γ.rowLens' (i + 1) - (f (i + 1))) :
+    x ∈ γ.sub f ↔ x.2 < γ.rowLens' x.1 - f x.1 := by
+  simp [sub, h]
 
 @[simp] lemma sub_rowLens (γ : YoungDiagram) (f : ℕ →₀ ℕ) (h : ∀ i, γ.rowLens' i - f i ≥
-    γ.rowLens' (i + 1) - (f (i + 1))) : (γ.sub f h).rowLens' = γ.rowLens' - f := by
-  simp [sub]
+    γ.rowLens' (i + 1) - (f (i + 1))) : (γ.sub f).rowLens' = γ.rowLens' - f := by
+  simp [sub, h]
 
 lemma sub_le (γ : YoungDiagram) (f : ℕ →₀ ℕ)
     (h : ∀ i, γ.rowLens' i - f i ≥ γ.rowLens' (i + 1) - (f (i + 1))) :
-    γ.sub f h ≤ γ := by
+    γ.sub f ≤ γ := by
   intro x hx
-  simp only [mem_cells, mem_sub, rowLens', Finsupp.coe_mk] at hx
+  rw [mem_cells, mem_sub _ _ h] at hx
   rw [mem_cells, mem_iff_lt_rowLen]
   refine lt_of_lt_of_le hx ?_
   exact Nat.sub_le (γ.rowLen x.1) (f x.1)
 
 
-theorem sub_le_sub_of_sub_le_next {γ : YoungDiagram} {f : ℕ →₀ ℕ}
+theorem sub_cond {γ : YoungDiagram} {f : ℕ →₀ ℕ}
     (h : ∀ i, γ.rowLens' i - f i ≥ γ.rowLens' (i + 1)) :
     ∀ i, γ.rowLens' i - f i ≥ γ.rowLens' (i + 1) - (f (i + 1)) := by
   intro i
@@ -59,10 +64,8 @@ lemma exists_mem_sdiff_of_ne {γ : YoungDiagram} {f g : ℕ →₀ ℕ}
     (hg : ∀ i, γ.rowLens' i - g i ≥ γ.rowLens' (i + 1))
     (hf' : ∀ i, f i ≤ γ.rowLens' i) (hg' : ∀ i, g i ≤ γ.rowLens' i)
     (hfg : f ≠ g) :
-    ∃ x ∈ γ, (x ∈ (γ.sub f (sub_le_sub_of_sub_le_next hf)).cells \
-    (γ.sub g (sub_le_sub_of_sub_le_next hg)).cells) ∨
-    (x ∈ (γ.sub g (sub_le_sub_of_sub_le_next hg)).cells \
-    (γ.sub f (sub_le_sub_of_sub_le_next hf)).cells) := by
+    ∃ x ∈ γ, (x ∈ (γ.sub f).cells \ (γ.sub g).cells) ∨
+    (x ∈ (γ.sub g).cells \ (γ.sub f).cells) := by
   rw [Finsupp.ne_iff] at hfg
   obtain ⟨i, hfg⟩ := hfg
   wlog hfg' : f i > g i generalizing f g
@@ -78,7 +81,8 @@ lemma exists_mem_sdiff_of_ne {γ : YoungDiagram} {f g : ℕ →₀ ℕ}
       specialize hf' i; specialize hg' i
       omega
     · right
-      simp only [Finset.mem_sdiff, mem_cells, mem_sub, not_lt, tsub_le_iff_right]
+      simp only [Finset.mem_sdiff, mem_cells, mem_sub _ _ (sub_cond hf),
+        mem_sub _ _ (sub_cond hg), not_lt, tsub_le_iff_right]
       constructor
       · specialize hf' i
         omega
@@ -89,10 +93,10 @@ def valid_extend (γ γ' : YoungDiagram) := ∀ i1 i2 j : ℕ, i1 < i2 →
 
 lemma sub_valid (γ : YoungDiagram) (f : ℕ →₀ ℕ)
     (h : ∀ i, γ.rowLens' i - f i ≥ γ.rowLens' (i + 1)) :
-    valid_extend γ (γ.sub f (sub_le_sub_of_sub_le_next h)) := by
+    valid_extend γ (γ.sub f) := by
   intro i1 i2 j hi hij2
   rw [mem_iff_lt_rowLen] at hij2
-  simp only [mem_sub]
+  simp only [mem_sub _ _ (sub_cond h)]
   refine lt_of_lt_of_le ?_ (h i1)
   rw [ rowLens'_eq_rowLen]
   refine lt_of_lt_of_le hij2 ?_
@@ -101,9 +105,9 @@ lemma sub_valid (γ : YoungDiagram) (f : ℕ →₀ ℕ)
 
 lemma card_sub (γ : YoungDiagram) (f : ℕ →₀ ℕ) (h : ∀ i, γ.rowLens' i - f i ≥
     γ.rowLens' (i + 1) - (f (i + 1))) (h' : ∀ i, f i ≤ γ.rowLens' i) :
-    (γ.sub f h).card = γ.card - ∑ x ∈ f.support, f x := by
-  simp only [card_eq_sum_rowLens, List.get_eq_getElem, get_rowLens, ← rowLens'_eq_rowLen,
-    sub_rowLens, Finsupp.coe_tsub, Pi.sub_apply]
+    (γ.sub f).card = γ.card - ∑ x ∈ f.support, f x := by
+  simp only [card_eq_sum_rowLens_get, List.get_eq_getElem, get_rowLens, ← rowLens'_eq_rowLen,
+    sub_rowLens _ _ h, Finsupp.coe_tsub, Pi.sub_apply]
   have hf : ∑ x ∈ f.support, f x = ∑ x : Fin (γ.rowLens.length), f x.1 := by
     rw [Fin.sum_univ_eq_sum_range]
     refine Finset.sum_subset_zero_on_sdiff ?_ ?_ ?_
@@ -123,8 +127,8 @@ lemma card_sub (γ : YoungDiagram) (f : ℕ →₀ ℕ) (h : ∀ i, γ.rowLens' 
     · simp
     · simp
   rw [hf, ← Finset.sum_tsub_distrib]
-  · have hrs : ∑ x : Fin (γ.sub f h).rowLens.length, (γ.rowLens' x.1 - f x.1) =
-        ∑ x ∈ Finset.range (γ.sub f h).rowLens.length, (γ.rowLens' x - f x) := by
+  · have hrs : ∑ x : Fin (γ.sub f).rowLens.length, (γ.rowLens' x.1 - f x.1) =
+        ∑ x ∈ Finset.range (γ.sub f).rowLens.length, (γ.rowLens' x - f x) := by
       rw [← Fin.sum_univ_eq_sum_range]
     have hrs' : ∑ x : Fin γ.rowLens.length, (γ.rowLens' x.1 - f x.1) =
         ∑ x ∈ Finset.range γ.rowLens.length, (γ.rowLens' x - f x) := by
@@ -135,7 +139,7 @@ lemma card_sub (γ : YoungDiagram) (f : ℕ →₀ ℕ) (h : ∀ i, γ.rowLens' 
     · simp only [length_rowLens, Finset.mem_sdiff, Finset.mem_range, not_lt, and_imp]
       intro x hx hxs
       rw [← Pi.sub_apply, ← Finsupp.coe_tsub, ← sub_rowLens γ f h, rowLens'_eq_rowLen]
-      have : ¬ x < (γ.sub f h).colLen 0 := by omega
+      have : ¬ x < (γ.sub f).colLen 0 := by omega
       rw [← mem_iff_lt_colLen, mem_iff_lt_rowLen] at this
       push_neg at this
       rw [Nat.le_zero] at this
@@ -149,9 +153,8 @@ end YoungDiagram
 namespace SemistandardYoungTableau
 
 lemma entry_lt_ite_max_el {γ : YoungDiagram} {f : ℕ →₀ ℕ}
-    (hf : ∀ i, γ.rowLens' i - f i ≥ γ.rowLens' (i + 1))
-    (T : SemistandardYoungTableau (γ.sub f (sub_le_sub_of_sub_le_next hf)))
-    (i j : ℕ) (hij : (i, j) ∈ γ.sub f (sub_le_sub_of_sub_le_next hf)) : T i j <
+    (T : SemistandardYoungTableau (γ.sub f))
+    (i j : ℕ) (hij : (i, j) ∈ γ.sub f) : T i j <
     (if hTc : T.content = 0 then 0 else ((max_el T.content hTc) + 1)) := by
   split_ifs with hTc
   · apply_fun Multiset.card at hTc

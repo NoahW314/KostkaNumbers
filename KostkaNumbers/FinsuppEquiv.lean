@@ -1,5 +1,5 @@
 import Mathlib
-
+import KostkaNumbers.Diagrams
 
 /-
 This shows that YoungDiagrams are equivalent to finitely supported
@@ -83,5 +83,22 @@ def equivRowLens : YoungDiagram ≃ {f : ℕ →₀ ℕ | Antitone f} where
   rw [← mem_iff_lt_colLen, mem_iff_lt_rowLen, Nat.pos_iff_ne_zero] at hi
   push_neg at hi
   exact hi
+
+
+lemma rowLens'_eq_iff {γ γ' : YoungDiagram} : γ.rowLens' = γ'.rowLens' ↔ γ = γ' := by
+  constructor
+  · intro h
+    rw [← rowLens_eq_iff]
+    refine List.ext_getElem ?_ ?_
+    · simp_rw [length_rowLens, colLen, Nat.find_eq_iff, mem_cells,
+        mem_iff_lt_rowLen, ← rowLens'_eq_rowLen, h, rowLens'_eq_rowLen,
+        ← mem_iff_lt_rowLen, ← mem_cells]
+      constructor
+      · exact Nat.find_spec (γ'.exists_notMem_col 0)
+      · intro n
+        exact Nat.find_min (γ'.exists_notMem_col 0)
+    · intro i h₁ h₂
+      simp_rw [get_rowLens, ← rowLens'_eq_rowLen, h]
+  · intro h; rw [h]
 
 end YoungDiagram

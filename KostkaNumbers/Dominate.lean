@@ -80,6 +80,26 @@ lemma sum_two_le_of_dominates {L L' : List ℕ} (hd : L ⊴ L')
   simp at hd
   exact hd
 
+lemma sum_three_le_of_dominates {L L' : List ℕ} (hd : L ⊴ L')
+    (hL : 2 < L.length) (hL' : 2 < L'.length) :
+    L[0] + L[1] + L[2] ≤ L'[0] + L'[1] + L'[2] := by
+  specialize hd 2
+  simp at hd
+  have hL1 : Finset.filter (fun i : Fin L.length => i.1 ≤ 2) Finset.univ =
+      {⟨0, by omega⟩, ⟨1, by omega⟩, ⟨2, hL⟩} := by
+    ext x
+    simp [Fin.eq_mk_iff_val_eq]
+    omega
+  have hL1' : Finset.filter (fun i : Fin L'.length => i.1 ≤ 2) Finset.univ =
+      {⟨0, by omega⟩, ⟨1, by omega⟩, ⟨2, hL'⟩} := by
+    ext x
+    simp [Fin.eq_mk_iff_val_eq]
+    omega
+  rw [hL1, hL1'] at hd
+  simp at hd
+  ring_nf at hd
+  exact hd
+
 lemma dominates_self {L : List ℕ} : L ⊴ L := by intro r; rfl
 
 lemma dominates_nil {L : List ℕ} : [] ⊴ L := by intro r; simp
@@ -196,6 +216,56 @@ lemma sum_le_sum_of_dominates {L L' : List ℕ} (hd : L ⊴ L') : L.sum ≤ L'.s
   rw [sum_with_eq_sum_univ (max L.length L'.length - 1) (by omega),
     sum_with_eq_sum_univ (max L.length L'.length - 1) (by omega)]
   exact hd (max L.length L'.length - 1)
+
+
+
+@[simp] lemma dominates_zero {L : List ℕ} : [0] ⊴ L := by intro r; simp
+
+lemma dominates_singleton_iff {L : List ℕ} {n : ℕ} (h : L.sum = n) (hn : n ≠ 0)
+    (hp : ∀ i : Fin (L.length), L[i.1] > 0) : ([n] ⊴ L) ↔ L = [n] := by
+  constructor
+  · intro hd
+    have hL : L.length ≤ 1 := by
+      apply lengths_le_of_dominates at hd
+      simp [h, hp] at hd
+      exact hd
+    have hL0 : L.length > 0 := by
+      refine List.length_pos_of_sum_ne_zero _ ?_
+      rw [h]
+      exact hn
+    have hL1 : L.length = 1 := by omega
+    rw [List.length_eq_one_iff] at hL1
+    obtain ⟨m, hm⟩ := hL1
+    rw [hm, List.sum_singleton] at h
+    rw [hm, h]
+  · intro hL
+    rw [hL]
+    exact dominates_self
+
+
+
+lemma replicate_one_dominates_iff {L : List ℕ} {n : ℕ} (h : L.sum = n)
+    (hp : ∀ x ∈ L, x > 0) :
+    (L ⊴ (List.replicate n 1)) ↔ L = List.replicate n 1 := by
+  constructor
+  · intro hd
+    rw [List.eq_replicate_iff]
+    suffices L.length = n by
+      constructor
+      · exact this
+      · refine List.forall_mem_eq_one_of_length_eq_sum ?_ hp
+        rw [this, h]
+    apply lengths_le_of_dominates at hd
+    specialize hd ?_ ?_
+    · rw [h, List.sum_replicate, smul_eq_mul, mul_one]
+    · simp
+    · rw [List.length_replicate] at hd
+      refine antisymm ?_ hd
+      rw [← h]
+      exact List.length_le_sum_of_one_le _ hp
+  · intro hL
+    rw [hL]
+    exact dominates_self
 
 /-
 Small domination results
@@ -342,3 +412,24 @@ lemma triple_dominates_triple {a b c d e f : ℕ} : ([a, b, c] ⊴ [d, e, f]) �
     intro r hr
     interval_cases r
     all_goals simp [Finset.sum_filter, Fin.sum_univ_three, h₁, h₂, h₃]
+
+
+lemma quad_dominates_triple {a b c d e f g : ℕ} : ([a, b, c] ⊴ [d, e, f, g]) ↔
+    a ≤ d ∧ a + b ≤ d + e ∧ a + b + c ≤ d + e + f := by
+  constructor
+  · intro h
+    constructor; swap; constructor
+    · refine sum_two_le_of_dominates h ?_ ?_
+      all_goals simp
+    · refine sum_three_le_of_dominates h ?_ ?_
+      all_goals simp
+    · refine get_zero_ge_of_dominates h ?_ ?_
+      all_goals simp
+  · intro ⟨h₁, h₂, h₃⟩
+    refine dominates_of_forall_lt_max ?_
+    simp
+    intro r hr
+    interval_cases r
+    all_goals simp [Finset.sum_filter, Fin.sum_univ_three, Fin.sum_univ_four,
+      h₁, h₂, h₃]
+    exact Nat.le_add_right_of_le h₃

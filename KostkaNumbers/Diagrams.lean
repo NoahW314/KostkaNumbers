@@ -10,6 +10,9 @@ namespace YoungDiagram
 
 @[simp] lemma bot_card : (⊥ : YoungDiagram).card = 0 := by simp
 
+@[simp] lemma bot_rowLens : (⊥ : YoungDiagram).rowLens = [] := by
+  simp [rowLens, colLen]
+
 variable {γ : YoungDiagram}
 
 lemma zero_notMem_rowLens : 0 ∉ Multiset.ofList γ.rowLens := by
@@ -49,6 +52,39 @@ lemma eq_bot_iff_zero_zero_notMem : γ = ⊥ ↔ (0, 0) ∉ γ := by
     push_neg at h
     obtain ⟨i, j, hij⟩ := h
     exact γ.up_left_mem (Nat.zero_le i) (Nat.zero_le j) hij
+
+
+
+lemma rowLens_eq_iff {γ γ' : YoungDiagram} : γ.rowLens = γ'.rowLens ↔ γ = γ' := by
+  constructor; swap
+  · intro h; rw [h]
+  intro h
+  ext x
+  by_cases hx : x.1 < γ.rowLens.length
+  · rw [mem_cells, mem_iff_lt_rowLen, ← get_rowLens]
+    · simp only [h]
+      rw [get_rowLens, ← mem_iff_lt_rowLen, ← mem_cells]
+      exact hx
+  · let hx' := hx
+    rw [length_rowLens, ← mem_iff_lt_colLen] at hx
+    rw [h, length_rowLens, ← mem_iff_lt_colLen] at hx'
+    have hxm : x ∉ γ := by
+      contrapose! hx
+      exact γ.up_left_mem (by rfl) (Nat.zero_le x.2) hx
+    have hxm' : x ∉ γ':= by
+      contrapose! hx'
+      exact γ'.up_left_mem (by rfl) (Nat.zero_le x.2) hx'
+    simp only [mem_cells, hxm, hxm']
+
+lemma rowLens_eq_iff' {γ γ' : YoungDiagram} : Multiset.ofList γ.rowLens =
+    Multiset.ofList γ'.rowLens ↔ γ = γ' := by
+  constructor
+  · intro h
+    rw [← rowLens_eq_iff]
+    refine List.eq_of_perm_of_sorted ?_ γ.rowLens_sorted γ'.rowLens_sorted
+    rw [← Multiset.coe_eq_coe, h]
+  · intro h; rw [h]
+
 
 
 lemma colLen_le_of_le {γ γ' : YoungDiagram} (h : γ' ≤ γ) : γ'.colLen 0 ≤ γ.colLen 0 := by
@@ -113,7 +149,7 @@ lemma range_colLen_eq_map_dedup (γ : YoungDiagram) : Multiset.range (γ.colLen 
 
 
 
-lemma card_eq_sum_rowLens : γ.card = ∑ i : Fin (γ.rowLens.length), γ.rowLens.get i := by
+lemma card_eq_sum_rowLens_get : γ.card = ∑ i : Fin (γ.rowLens.length), γ.rowLens.get i := by
   simp only [List.get_eq_getElem, get_rowLens, rowLen_eq_card]
   rw [← Finset.card_biUnion, YoungDiagram.card]
   · congr
@@ -141,7 +177,7 @@ lemma card_eq_sum_rowLens : γ.card = ∑ i : Fin (γ.rowLens.length), γ.rowLen
   rw [← has.2, ← hbs.2] at hab
   exact hab rfl
 
-lemma card_eq_sum_rowLens' : γ.card = ∑ i : Fin (γ.rowLens.length+1), γ.rowLen i := by
+lemma card_eq_sum_rowLen : γ.card = ∑ i : Fin (γ.rowLens.length+1), γ.rowLen i := by
   let r : Fin (γ.rowLens.length+1) := ⟨γ.rowLens.length, Nat.lt_add_one γ.rowLens.length⟩
   have hr : r ∈ Finset.univ := by exact Finset.mem_univ r
   suffices γ.card = ∑ i ∈ Finset.univ.erase r, γ.rowLen i + γ.rowLen r by
@@ -153,7 +189,7 @@ lemma card_eq_sum_rowLens' : γ.card = ∑ i : Fin (γ.rowLens.length+1), γ.row
     unfold r
     simp
   push_neg at hrl
-  rw [hrl, card_eq_sum_rowLens, add_zero]
+  rw [hrl, card_eq_sum_rowLens_get, add_zero]
   let e : (i : Fin γ.rowLens.length) → (i ∈ Finset.univ) → Fin (γ.rowLens.length+1) :=
     fun i _ ↦ ⟨i.1, by exact lt_trans i.2 (Nat.lt_add_one γ.rowLens.length)⟩
   refine Finset.sum_bij e ?_ ?_ ?_ ?_
@@ -172,6 +208,10 @@ lemma card_eq_sum_rowLens' : γ.card = ∑ i : Fin (γ.rowLens.length+1), γ.row
     use ⟨i, by omega⟩
   · simp only [Finset.mem_univ, List.get_eq_getElem, get_rowLens, imp_self, implies_true, e]
 
+lemma card_eq_sum_rowLens : γ.card = γ.rowLens.sum := by
+  simp only [card_eq_sum_rowLens_get, List.get_eq_getElem, Fin.sum_univ_getElem]
+
+
 lemma rowLens_ofRowLens_length_le_length {w : List ℕ} {hw : List.Sorted (· ≥ ·) w} :
     (ofRowLens w hw).rowLens.length ≤ w.length := by
   simp [← Nat.not_lt, ← mem_iff_lt_colLen, ofRowLens, YoungDiagram.mem_cellsOfRowLens]
@@ -180,7 +220,7 @@ lemma rowLens_ofRowLens_length_le_length {w : List ℕ} {hw : List.Sorted (· �
 @[simp] lemma card_ofRowLens {L : List ℕ} {hL : List.Sorted (· ≥ ·) L}
     (hp : ∀ x ∈ L, 0 < x) :
     (ofRowLens L hL).card = L.sum := by
-  rw [card_eq_sum_rowLens, rowLens_ofRowLens_eq_self hp]
+  rw [card_eq_sum_rowLens_get, rowLens_ofRowLens_eq_self hp]
   simp only [List.get_eq_getElem, Fin.sum_univ_getElem]
 
 lemma rowLen_ofRowLens_eq_zero {L : List ℕ} {hL : List.Sorted (· ≥ ·) L} {i : ℕ}
@@ -197,6 +237,40 @@ lemma rowLen_ofRowLens_eq_zero {L : List ℕ} {hL : List.Sorted (· ≥ ·) L} {
   rw [← mem_iff_lt_colLen, mem_iff_lt_rowLen, Nat.pos_iff_ne_zero] at hi
   push_neg at hi
   exact hi
+
+
+
+@[simp] lemma rowLen_ofRowLens' {w : List ℕ} {hw : List.Sorted (· ≥ ·) w} {i : ℕ}
+    (hi : i < w.length) : (ofRowLens w hw).rowLen i = w[i] := by
+  simp [rowLen, Nat.find_eq_iff, mem_ofRowLens, hi]
+
+@[simp] lemma colLen_ofRowLens_two {a b : ℕ} {hab : List.Sorted (· ≥ ·) [a, b]} {i : ℕ} :
+    (ofRowLens [a, b] hab).colLen i = if i < a then if i < b then 2 else 1 else 0 := by
+  split_ifs with ha hb
+  all_goals simp [colLen, Nat.find_eq_iff, mem_ofRowLens]
+  · intro n hn; use hn
+    interval_cases n
+    all_goals simp [ha, hb]
+  · omega
+  · omega
+
+@[simp] lemma colLen_ofRowLens_three {a b c : ℕ}
+    {habc : List.Sorted (· ≥ ·) [a, b, c]} {i : ℕ} :
+    (ofRowLens [a, b, c] habc).colLen i =
+    if i < a then if i < b then if i < c then 3 else 2 else 1 else 0 := by
+  split_ifs with ha hb hc
+  all_goals simp [colLen, Nat.find_eq_iff, mem_ofRowLens]
+  · intro n hn; use hn
+    interval_cases n
+    all_goals simp [ha, hb, hc]
+  · push_neg at hc
+    simp [hc]
+    intro n hn; use (by linarith)
+    interval_cases n
+    all_goals simp [ha, hb]
+  · omega
+  · omega
+
 
 
 end YoungDiagram

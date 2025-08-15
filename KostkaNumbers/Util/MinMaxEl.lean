@@ -42,6 +42,18 @@ lemma min_el_of_zero_mem (h0 : 0 ∈ μ) : min_el μ (by
   refine antisymm ?_ (Nat.zero_le _)
   exact min_el_le' _ h0
 
+lemma min_el_replicate (n a : ℕ) (h : n ≠ 0) : min_el (Multiset.replicate n a)
+    (by rw [ne_eq, ← Multiset.card_eq_zero, Multiset.card_replicate]; exact h) = a := by
+  have hr0 : Multiset.replicate n a ≠ 0 := by
+    rw [ne_eq, ← Multiset.card_eq_zero, Multiset.card_replicate]
+    exact h
+  let ha := min_el_mem hr0
+  rw [Multiset.mem_replicate] at ha
+  exact ha.2
+
+
+
+
 
 lemma sort_ne_nil_le {μ : Multiset ℕ} (h : μ ≠ 0) : (Multiset.sort (· ≤ ·) μ) ≠ [] := by
   rw [ne_eq, List.eq_nil_iff_length_eq_zero, Multiset.length_sort, Multiset.card_eq_zero]

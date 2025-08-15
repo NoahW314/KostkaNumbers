@@ -18,6 +18,10 @@ def horizontalDiagram (n : ℕ) := ofRowLens [n] <| List.sorted_singleton n
     · exact h.2
     · rw [← h.1]
 
+@[simp] lemma horizontalDiagram_zero : horizontalDiagram 0 = ⊥ := by
+  ext x
+  simp [horizontalDiagram, mem_ofRowLens]
+
 lemma horizontalDiagram_succ (n : ℕ) :
     (horizontalDiagram (n+1)).cells.val = (0,n) ::ₘ (horizontalDiagram n).cells.val := by
   simp [horizontalDiagram, ofRowLens, YoungDiagram.cellsOfRowLens]
@@ -25,6 +29,12 @@ lemma horizontalDiagram_succ (n : ℕ) :
 
 @[simp] lemma horizontalDiagram_card {n : ℕ} : (horizontalDiagram n).card = n := by
   simp [horizontalDiagram, ofRowLens, YoungDiagram.cellsOfRowLens, YoungDiagram.card]
+
+
+@[simp] lemma horizontalDiagram_rowLens {n : ℕ} (hn : n ≠ 0) :
+    (horizontalDiagram n).rowLens = [n] := by
+  rw [horizontalDiagram, rowLens_ofRowLens_eq_self]
+  simp [Nat.pos_iff_ne_zero, hn]
 
 
 

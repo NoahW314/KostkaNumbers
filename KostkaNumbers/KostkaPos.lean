@@ -112,8 +112,6 @@ lemma zero_zero_mem_of_dominates (γ : YoungDiagram) {μ : Multiset ℕ}
     contrapose! this
     exact eq_bot_iff_zero_zero_notMem.mpr this
   rw [eq_bot_iff_card_eq_zero, card_eq_sum_rowLens]
-  simp only [List.get_eq_getElem]
-  rw [Fin.sum_univ_getElem]
   apply sum_le_sum_of_dominates at hd
   contrapose! hd
   rw [hd, Nat.pos_iff_ne_zero, ← Multiset.coe_toList μ, Multiset.coe_sort,
@@ -200,8 +198,7 @@ lemma jth_le_card_sub_one (hd : γ.rowLens ⊵ (Multiset.sort (· ≥ ·) μ))
   refine lt_of_lt_of_le (jth_lt_colLen γ hd hμ h0) ?_
   apply lengths_le_of_dominates at hd
   specialize hd ?_ ?_
-  · simp only [ge_iff_le, Multiset.sort_sum, ← h, card_eq_sum_rowLens, List.get_eq_getElem,
-      Fin.sum_univ_getElem]
+  · simp only [ge_iff_le, Multiset.sort_sum, ← h, card_eq_sum_rowLens]
   · intro i
     refine γ.pos_of_mem_rowLens _ <| List.get_mem γ.rowLens i
   · rw [length_rowLens, Multiset.length_sort] at hd
@@ -334,14 +331,13 @@ Convenient definition
 
 noncomputable
 def sub_diagram (hd : γ.rowLens ⊵ Multiset.sort (· ≥ ·) μ)
-    (hμ : μ ≠ 0) (h0 : 0 ∉ μ) : YoungDiagram :=
-    γ.sub (sub_max γ hd hμ h0).1 (sub_le_sub_of_sub_le_next (sub_max γ hd hμ h0).2.1)
+    (hμ : μ ≠ 0) (h0 : 0 ∉ μ) : YoungDiagram := γ.sub (sub_max γ hd hμ h0).1
 
 lemma sub_diagram_colLen_le (hd : γ.rowLens ⊵ Multiset.sort (· ≥ ·) μ)
     (hμ : μ ≠ 0) (h0 : 0 ∉ μ) : (sub_diagram hd hμ h0).colLen 0 ≤ γ.colLen 0 := by
   refine colLen_le_of_le ?_
   unfold sub_diagram
-  exact γ.sub_le _ _
+  exact γ.sub_le _ (sub_cond (sub_max γ hd hμ h0).2.1)
 
 lemma sub_diagram_colLen (hd : γ.rowLens ⊵ Multiset.sort (· ≥ ·) μ)
     (hμ : μ ≠ 0) (h0 : 0 ∉ μ) : γ.colLen 0 - 1 ≤ (sub_diagram hd hμ h0).colLen 0 := by
@@ -358,8 +354,9 @@ lemma sub_diagram_colLen (hd : γ.rowLens ⊵ Multiset.sort (· ≥ ·) μ)
     push_neg
     rw [mem_cells, mem_iff_lt_rowLen]
     refine lt_of_lt_of_le this (rowLen_anti _ _ _ (by omega))
-  simp only [sub_diagram, sub_max, sub_max_finsupp, gt_iff_lt, ← rowLens'_eq_rowLen, sub_rowLens,
-    Finsupp.coe_tsub, Finsupp.coe_mk, Pi.sub_apply, sub_max_fun, tsub_pos_iff_lt]
+  rw [← rowLens'_eq_rowLen, sub_diagram, sub_rowLens _ _ (sub_cond (sub_max γ hd hμ h0).2.1)]
+  simp only [sub_max, sub_max_finsupp, gt_iff_lt, Finsupp.coe_tsub, Finsupp.coe_mk, Pi.sub_apply,
+    sub_max_fun, tsub_pos_iff_lt]
   have hc1 : γ.rowLens' (γ.colLen 0 - 1) > 0 := by
     rw [rowLens'_eq_rowLen, gt_iff_lt, ← mem_iff_lt_rowLen, mem_iff_lt_colLen]
     omega
@@ -381,9 +378,10 @@ lemma card_sub_max_eq_sum_erase_min_el (γ : YoungDiagram) (μ : Multiset ℕ)
     (hd : γ.rowLens ⊵ Multiset.sort (· ≥ ·) μ) (h : γ.card = μ.sum) (hμ : μ ≠ 0) (h0 : 0 ∉ μ) :
     (sub_diagram hd hμ h0).card = (μ.erase (min_el μ hμ)).sum := by
   rw [sub_diagram, card_sub, sub_max_support_sum, Multiset.sum_erase' (min_el_mem hμ), h]
-  simp only [sub_max, sub_max_finsupp, Finsupp.coe_mk]
-  intro i
-  exact sub_max_fun_le_rowLens' γ hd hμ h0 i
+  all_goals simp only [sub_max, sub_max_finsupp, Finsupp.coe_mk]
+  · exact sub_cond (sub_max γ hd hμ h0).2.1
+  · intro i
+    exact sub_max_fun_le_rowLens' γ hd hμ h0 i
 
 /-
 Proof of domination after subtraction and erasure
@@ -409,7 +407,7 @@ lemma sum_rowLens_sub_sub_max_fun_lt_jth (hd : γ.rowLens ⊵ Multiset.sort (· 
       let hx := x.2
       simp only [sub_diagram, length_rowLens] at hx
       nth_rw 1 [γ.length_rowLens]
-      exact lt_of_lt_of_le hx (colLen_le_of_le (γ.sub_le _ _))⟩
+      exact lt_of_lt_of_le hx (colLen_le_of_le (γ.sub_le _ (sub_cond (sub_max γ hd hμ h0).2.1)))⟩
   refine Finset.sum_bij e ?_ ?_ ?_ ?_
   · simp [e]
   · intro x₁ _ x₂ _
@@ -424,7 +422,9 @@ lemma sum_rowLens_sub_sub_max_fun_lt_jth (hd : γ.rowLens ⊵ Multiset.sort (· 
     intro x hx
     have hx' : x.1 ≠ jth γ hμ := by omega
     have hx'' : ¬x.1 > jth γ hμ := by omega
-    simp [sub_diagram, sub_max, sub_max_finsupp, sub_max_fun, hx', hx'']
+    unfold sub_diagram
+    rw [sub_rowLens _ _ (sub_cond (sub_max γ hd hμ h0).2.1)]
+    simp [sub_max, sub_max_finsupp, sub_max_fun, hx', hx'']
 
 lemma sum_fin_with_eq_sum_nat_bdd' {n m : ℕ} {f : ℕ → ℕ} :
     ∑ x : Fin n with x.1 ≤ m, f x.1 = ∑ x ∈ {x : ℕ | x ≤ m}.toFinset with x < n, f x := by
@@ -477,8 +477,13 @@ lemma sum_rowLens_sub_sub_max_fun_ge_jth (hd : γ.rowLens ⊵ Multiset.sort (· 
 
   have hj : jth γ hμ ∈ {x : ℕ | x ≤ r}.toFinset := by simp [hr]
   rw [← Finset.sum_erase_add _ _ hj]
-  conv => lhs; rhs; simp only [sub_diagram, sub_max, sub_max_finsupp, gt_iff_lt, sub_rowLens,
+  conv => {
+    lhs; rhs;
+    unfold sub_diagram
+    rw [sub_rowLens _ _ (sub_cond (sub_max γ hd hμ h0).2.1)]
+    simp only [sub_max, sub_max_finsupp, gt_iff_lt, sub_rowLens,
     Finsupp.coe_tsub, Finsupp.coe_mk, Pi.sub_apply, sub_max_fun, ↓reduceIte]
+  }
   have hj' : jth γ hμ ∈ {x : ℕ | x ≤ r + 1}.toFinset := by
     rw [Set.mem_toFinset, Set.mem_setOf_eq]
     exact Nat.le_add_right_of_le hr
@@ -521,8 +526,10 @@ lemma sum_rowLens_sub_sub_max_fun_ge_jth (hd : γ.rowLens ⊵ Multiset.sort (· 
       have hxj' : ¬ x - 1 < jth γ hμ := by omega
       simp [hxj']
       omega
-  · simp only [Finset.mem_erase, ne_eq, Set.mem_toFinset, Set.mem_setOf_eq, sub_diagram, sub_max,
-      sub_max_finsupp, gt_iff_lt, sub_rowLens, Finsupp.coe_tsub, Finsupp.coe_mk, Pi.sub_apply,
+  · unfold sub_diagram
+    rw [sub_rowLens _ _ (sub_cond (sub_max γ hd hμ h0).2.1)]
+    simp only [Finset.mem_erase, ne_eq, Set.mem_toFinset, Set.mem_setOf_eq, sub_max,
+      sub_max_finsupp, gt_iff_lt, Finsupp.coe_tsub, Finsupp.coe_mk, Pi.sub_apply,
       sub_max_fun, and_imp, e]
     intro x hxj hxr
     simp only [hxj, ↓reduceIte]
@@ -595,8 +602,6 @@ lemma rowLens_sub_dominates_sort_erase_min_el (γ : YoungDiagram) (μ : Multiset
   swap
   · rw [Multiset.sort_sum, ← (card_sub_max_eq_sum_erase_min_el γ μ hd h hμ h0),
       card_eq_sum_rowLens]
-    simp only [List.get_eq_getElem]
-    rw [Fin.sum_univ_getElem]
 
   intro r hr
   simp only [List.get_eq_getElem, get_rowLens, ← rowLens'_eq_rowLen]
@@ -632,14 +637,14 @@ theorem kostka_pos_of_dominates (γ : YoungDiagram) (μ : Multiset ℕ)
     exact zero_lt_one
 
   rw [kostka_recursion γ μ hμ h0 h]
-  suffices ∃ f : SubRowLensType γ, ((γ.sub f.1 (sub_le_sub_of_sub_le_next f.2.1)).rowLens
+  suffices ∃ f : SubRowLensType γ, ((γ.sub f.1).rowLens
       ⊵ Multiset.sort (· ≥ ·) (μ.erase (min_el μ hμ))) ∧
-      (γ.sub f.1 (sub_le_sub_of_sub_le_next f.2.1)).card = (μ.erase (min_el μ hμ)).sum by
+      (γ.sub f.1).card = (μ.erase (min_el μ hμ)).sum by
     obtain ⟨f, hf, hγμ⟩ := this
     let hf := kostka_pos_of_dominates _ _ hf hγμ ?_
     · refine lt_of_lt_of_le hf ?_
       have hfp : ∀ f : SubRowLensType γ, f ∈ Finset.univ →
-          0 ≤ kostkaNumber (γ.sub f.1 (sub_le_sub_of_sub_le_next f.2.1))
+          0 ≤ kostkaNumber (γ.sub f.1)
           (μ.erase (min_el μ hμ)) := by simp
       exact Finset.single_le_sum hfp (Finset.mem_univ _)
     · contrapose! h0

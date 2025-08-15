@@ -29,6 +29,7 @@ instance subRowLensFintype (γ : YoungDiagram) : Fintype (SubRowLensType γ) := 
 
 
 
+
 lemma exists_max_cell_start {γ : YoungDiagram} (T : SemistandardYoungTableau γ)
     (hTc : T.content ≠ 0) (i : ℕ) :
     ∃ j : ℕ, ∀ j' ≥ j, (i, j') ∈ γ → T i j' = max_el T.content hTc := by
@@ -157,10 +158,12 @@ lemma find_max_cell_start_le_rowLens' {γ : YoungDiagram} (T : SemistandardYoung
 
 open Classical in
 lemma entry_eq_max_el {γ : YoungDiagram} (T : SemistandardYoungTableau γ)
-    (hTc : T.content ≠ 0) (i j : ℕ) (hij : (i, j) ∈ γ) (hij' : (i, j) ∉
-    γ.sub (max_cell_len T hTc) (sub_le_sub_of_sub_le_next (max_cell_len_sub T hTc))) :
+    (hTc : T.content ≠ 0) (i j : ℕ) (hij : (i, j) ∈ γ)
+    (hij' : (i, j) ∉ γ.sub (max_cell_len T hTc)) :
     T i j = max_el T.content hTc := by
-  simp [max_cell_len] at hij'
+  rw [mem_sub _ _ (sub_cond (max_cell_len_sub T hTc))] at hij'
+  simp only [max_cell_len, ne_eq, ite_not, ge_iff_le, Finsupp.coe_mk, not_lt,
+    tsub_le_iff_right] at hij'
   suffices j ≥ Nat.find (exists_max_cell_start T hTc i) by
     exact Nat.find_spec (exists_max_cell_start T hTc i) j this hij
   let hc := find_max_cell_start_le_rowLens' T hTc i
@@ -169,11 +172,12 @@ lemma entry_eq_max_el {γ : YoungDiagram} (T : SemistandardYoungTableau γ)
 lemma entry_eq_max_el_iff {γ : YoungDiagram} (T : SemistandardYoungTableau γ)
     (hTc : T.content ≠ 0) (he : ∃ x ∈ T.content, x ≠ 0)
     (i j : ℕ) : T i j = max_el T.content hTc ↔
-    (i, j) ∈ γ.cells \ (γ.sub (max_cell_len T hTc) (sub_le_sub_of_sub_le_next
-    (max_cell_len_sub T hTc))).cells := by
+    (i, j) ∈ γ.cells \ (γ.sub (max_cell_len T hTc)).cells := by
   constructor
   · intro hij
-    simp [max_cell_len]
+    rw [Finset.mem_sdiff, mem_cells, mem_cells,
+      mem_sub _ _ (sub_cond (max_cell_len_sub T hTc))]
+    simp only [max_cell_len, ne_eq, ite_not, ge_iff_le, Finsupp.coe_mk, not_lt, tsub_le_iff_right]
     constructor
     · contrapose! hij
       symm
@@ -187,18 +191,17 @@ lemma entry_eq_max_el_iff {γ : YoungDiagram} (T : SemistandardYoungTableau γ)
     exact entry_eq_max_el T hTc i j hij.1 hij.2
 
 lemma exists_nonzero_of_mem_sub {γ : YoungDiagram} (T : SemistandardYoungTableau γ)
-    (hTc : T.content ≠ 0) (i j : ℕ) (hij' : (i, j) ∈ γ.sub (max_cell_len T hTc)
-    (sub_le_sub_of_sub_le_next (max_cell_len_sub T hTc))) :
+    (hTc : T.content ≠ 0) (i j : ℕ) (hij' : (i, j) ∈ γ.sub (max_cell_len T hTc)) :
     ∃ x ∈ T.content, x ≠ 0 := by
   contrapose! hij'
-  simp only [max_cell_len, ne_eq, ite_not, ge_iff_le, mem_sub, Finsupp.coe_mk, not_lt,
+  rw [mem_sub _ _ (sub_cond (max_cell_len_sub T hTc))]
+  simp only [max_cell_len, ne_eq, ite_not, ge_iff_le, Finsupp.coe_mk, not_lt,
     tsub_le_iff_right]
   rw [find_max_cell_start_eq_zero T hTc hij']
   simp
 
 lemma entry_lt_max_el {γ : YoungDiagram} (T : SemistandardYoungTableau γ)
-    (hTc : T.content ≠ 0) (i j : ℕ) (hij' : (i, j) ∈ γ.sub (max_cell_len T hTc)
-    (sub_le_sub_of_sub_le_next (max_cell_len_sub T hTc))) :
+    (hTc : T.content ≠ 0) (i j : ℕ) (hij' : (i, j) ∈ γ.sub (max_cell_len T hTc)) :
     T i j < max_el T.content hTc := by
   have hemp := exists_nonzero_of_mem_sub T hTc i j hij'
   contrapose! hij'
@@ -207,10 +210,9 @@ lemma entry_lt_max_el {γ : YoungDiagram} (T : SemistandardYoungTableau γ)
   exact he.2
 
 lemma entry_restrict_lt_max_el {γ : YoungDiagram} (T : SemistandardYoungTableau γ)
-    (hTc : T.content ≠ 0) (i j : ℕ) (hij' : (i, j) ∈ γ.sub (max_cell_len T hTc)
-    (sub_le_sub_of_sub_le_next (max_cell_len_sub T hTc))) :
-    (T.restrict (γ.sub_le (max_cell_len T hTc) (sub_le_sub_of_sub_le_next
-    (max_cell_len_sub T hTc)))) i j < max_el T.content hTc := by
+    (hTc : T.content ≠ 0) (i j : ℕ) (hij' : (i, j) ∈ γ.sub (max_cell_len T hTc)) :
+    (T.restrict (γ.sub_le (max_cell_len T hTc) (sub_cond (max_cell_len_sub T hTc))))
+    i j < max_el T.content hTc := by
   simp only [restrict, DFunLike.coe]
   simp only [hij', ↓reduceIte, to_fun_eq_coe]
   exact entry_lt_max_el T hTc i j hij'
@@ -218,7 +220,7 @@ lemma entry_restrict_lt_max_el {γ : YoungDiagram} (T : SemistandardYoungTableau
 
 lemma count_max_el_restrict_max_cells {γ : YoungDiagram} (T : SemistandardYoungTableau γ)
     (hTc : T.content ≠ 0) : Multiset.count (max_el T.content hTc)
-    (T.restrict (γ.sub_le (max_cell_len T hTc) (sub_le_sub_of_sub_le_next
+    (T.restrict (γ.sub_le (max_cell_len T hTc) (sub_cond
     (max_cell_len_sub T hTc)))).content = 0 := by
   simp only [content, Multiset.count_eq_zero, Multiset.mem_map, Finset.mem_val, mem_cells,
     Prod.exists, not_exists, not_and]
@@ -228,17 +230,17 @@ lemma count_max_el_restrict_max_cells {γ : YoungDiagram} (T : SemistandardYoung
 
 lemma restrict_max_cells_content {γ : YoungDiagram} (T : SemistandardYoungTableau γ)
     (hTc : T.content ≠ 0) :
-    (T.restrict (γ.sub_le (max_cell_len T hTc) (sub_le_sub_of_sub_le_next
+    (T.restrict (γ.sub_le (max_cell_len T hTc) (sub_cond
     (max_cell_len_sub T hTc)))).content = T.content.remove (max_el T.content hTc) := by
-  nth_rw 11 [← restrict_extend T (γ.sub_le (max_cell_len T hTc) (sub_le_sub_of_sub_le_next
-    (max_cell_len_sub T hTc))) (γ.sub_valid (max_cell_len T hTc) (max_cell_len_sub T hTc))
-    (entry_eq_max_el T hTc)]
-  · rw [extend_content]
-    · simp only [Multiset.remove, Multiset.count_add, Multiset.count_replicate_self]
-      symm
-      rw [count_max_el_restrict_max_cells, zero_add, Multiset.add_sub_cancel_right]
-    · exact sub_le γ (max_cell_len T hTc) (sub_le_sub_of_sub_le_next (max_cell_len_sub T hTc))
-    · exact entry_restrict_lt_max_el T hTc
+  nth_rw 7 [← restrict_extend T (γ.sub_le (max_cell_len T hTc)
+    (sub_cond (max_cell_len_sub T hTc))) (γ.sub_valid (max_cell_len T hTc)
+    (max_cell_len_sub T hTc)) (entry_eq_max_el T hTc)]
+  rw [extend_content]
+  · simp only [Multiset.remove, Multiset.count_add, Multiset.count_replicate_self]
+    symm
+    rw [count_max_el_restrict_max_cells, zero_add, Multiset.add_sub_cancel_right]
+  · exact sub_le γ (max_cell_len T hTc) (sub_cond (max_cell_len_sub T hTc))
+  · exact entry_restrict_lt_max_el T hTc
 
 
 lemma max_el_fromCounts_add_one_eq_card {μ : Multiset ℕ} (hμ : μ ≠ 0) (h0 : 0 ∉ μ) :
@@ -267,7 +269,7 @@ def unionEquiv (γ : YoungDiagram) (μ : Multiset ℕ) (hμ : μ ≠ 0) (h0 : 0 
     SemistandardYoungTableauWithContent γ μ ≃
     Finset.biUnion (Finset.univ : Finset (SubRowLensType γ)) (fun ⟨f, hf⟩ ↦
     {T : SemistandardYoungTableauWithContent γ μ |
-    (T.1.restrict (γ.sub_le f (sub_le_sub_of_sub_le_next hf.1))).content =
+    (T.1.restrict (γ.sub_le f (sub_cond hf.1))).content =
     (μ.erase (min_el μ hμ)).fromCounts}) where
   toFun T := ⟨T, by
     have hTc : T.1.content ≠ 0 := by
@@ -302,11 +304,11 @@ def unionEquiv (γ : YoungDiagram) (μ : Multiset ℕ) (hμ : μ ≠ 0) (h0 : 0 
 lemma entry_eq_ite_max_el {γ : YoungDiagram} {μ : Multiset ℕ} (hμ : μ ≠ 0) (h0 : 0 ∉ μ)
     {f : ℕ →₀ ℕ} (hf : ∀ i, γ.rowLens' i - f i ≥ γ.rowLens' (i + 1))
     (T : SemistandardYoungTableau γ) (hT : T.content = μ.fromCounts)
-    (hT' : (T.restrict <| γ.sub_le f (sub_le_sub_of_sub_le_next hf)).content =
+    (hT' : (T.restrict <| γ.sub_le f (sub_cond hf)).content =
     (μ.erase (min_el μ hμ)).fromCounts) (i j : ℕ) (hij : (i, j) ∈ γ)
-    (hij' : (i, j) ∉ γ.sub f (sub_le_sub_of_sub_le_next hf)) :
-    T i j = (if hTc : (T.restrict (γ.sub_le f (sub_le_sub_of_sub_le_next hf))).content = 0
-    then 0 else max_el (T.restrict (γ.sub_le f (sub_le_sub_of_sub_le_next hf))).content hTc
+    (hij' : (i, j) ∉ γ.sub f) :
+    T i j = (if hTc : (T.restrict (γ.sub_le f (sub_cond hf))).content = 0
+    then 0 else max_el (T.restrict (γ.sub_le f (sub_cond hf))).content hTc
     + 1) := by
   split_ifs with hc0
   · rw [hT', Multiset.fromCounts_eq_zero_iff, Multiset.erase_eq_zero_iff hμ] at hc0
@@ -325,12 +327,12 @@ lemma entry_eq_ite_max_el {γ : YoungDiagram} {μ : Multiset ℕ} (hμ : μ ≠ 
       exact Multiset.mem_of_mem_erase h0
     rw [max_el_fromCounts_add_one_eq_card ?_ h0',
       Multiset.card_erase_of_mem (min_el_mem hμ), Nat.pred_eq_sub_one]
-    · have hijs : (i, j) ∈ γ.cells \ (γ.sub f (sub_le_sub_of_sub_le_next hf)).cells := by
+    · have hijs : (i, j) ∈ γ.cells \ (γ.sub f).cells := by
         simp [hij, hij']
       let hijc := mem_content_sdiff_of_mem_sdiff T
-        (γ.sub_le f (sub_le_sub_of_sub_le_next hf)) hijs
+        (γ.sub_le f (sub_cond hf)) hijs
       rw [hT, hT', Multiset.erase_fromCounts_of_min μ hμ, Multiset.remove,
-        Multiset.sub_sub_of_sub, Multiset.mem_replicate] at hijc
+        tsub_tsub_cancel_of_le, Multiset.mem_replicate] at hijc
       · exact hijc.2
       exact Multiset.replicate_count_le
     · rw [ne_eq, ← Multiset.fromCounts_eq_zero_iff _ h0', ← hT']
@@ -342,19 +344,19 @@ noncomputable
 def recEquiv (γ : YoungDiagram) (μ : Multiset ℕ) (hμ : μ ≠ 0) (h0 : 0 ∉ μ)
     (h : γ.card = μ.sum) (f : ℕ →₀ ℕ) (hf : ∀ i, γ.rowLens' i - f i ≥ γ.rowLens' (i + 1)) :
     {T : SemistandardYoungTableauWithContent γ μ |
-    (T.1.restrict (γ.sub_le f (sub_le_sub_of_sub_le_next hf))).content =
+    (T.1.restrict (γ.sub_le f (sub_cond hf))).content =
     (μ.erase (min_el μ hμ)).fromCounts} ≃
-    SemistandardYoungTableauWithContent (γ.sub f (sub_le_sub_of_sub_le_next hf))
+    SemistandardYoungTableauWithContent (γ.sub f)
     (μ.erase (min_el μ hμ)) where
-  toFun := fun ⟨T, hT⟩ ↦ ⟨T.1.restrict (γ.sub_le f (sub_le_sub_of_sub_le_next hf)), by
+  toFun := fun ⟨T, hT⟩ ↦ ⟨T.1.restrict (γ.sub_le f (sub_cond hf)), by
     simp at hT
     simp [SemistandardYoungTableauWithContent, hT]⟩
   invFun := fun ⟨T, hT⟩ ↦ ⟨⟨T.extend (γ.sub_valid f hf)
     (if hTc : T.content = 0 then 0 else ((max_el T.content hTc) + 1))
-    (entry_lt_ite_max_el hf T), by
+    (entry_lt_ite_max_el T), by
     rw [SemistandardYoungTableauWithContent, Set.mem_setOf] at hT
     rw [SemistandardYoungTableauWithContent, Set.mem_setOf,
-      extend_content T (γ.sub_le f (sub_le_sub_of_sub_le_next hf)), hT]
+      extend_content T (γ.sub_le f (sub_cond hf)), hT]
     apply_fun Multiset.card at hT
     simp only [content_card_eq_card, Multiset.fromCounts_card] at hT
     rw [hT, h, ← Multiset.sum_erase (min_el_mem hμ), Nat.add_sub_cancel]
@@ -387,13 +389,13 @@ def recEquiv (γ : YoungDiagram) (μ : Multiset ℕ) (hμ : μ ≠ 0) (h0 : 0 �
       Subtype.mk.injEq]
     intro T hT hT'
     symm
-    nth_rw 1 [← T.restrict_extend (γ.sub_le f (sub_le_sub_of_sub_le_next hf))]
+    nth_rw 1 [← T.restrict_extend (γ.sub_le f (sub_cond hf))]
     exact entry_eq_ite_max_el hμ h0 hf T hT hT'
   right_inv := by
     simp only [Function.RightInverse, Function.LeftInverse, Subtype.forall, Subtype.mk.injEq]
     intro T _
-    exact T.extend_restrict (γ.sub_le f (sub_le_sub_of_sub_le_next hf)) (γ.sub_valid f hf)
-      _ (entry_lt_ite_max_el hf T)
+    exact T.extend_restrict (γ.sub_le f (sub_cond hf)) (γ.sub_valid f hf)
+      _ (entry_lt_ite_max_el T)
 
 
 
@@ -401,7 +403,7 @@ open Classical in
 theorem kostka_recursion (γ : YoungDiagram) (μ : Multiset ℕ) (hμ : μ ≠ 0) (h0 : 0 ∉ μ)
     (h : γ.card = μ.sum) :
     kostkaNumber γ μ = ∑ f : SubRowLensType γ,
-    kostkaNumber (γ.sub f.1 (sub_le_sub_of_sub_le_next f.2.1)) (μ.erase (min_el μ hμ)) := by
+    kostkaNumber (γ.sub f.1) (μ.erase (min_el μ hμ)) := by
 
   let hcc := Nat.card_congr (unionEquiv γ μ hμ h0)
   rw [kostkaNumber_eq_card_ssyt_content, hcc, Nat.card_eq_finsetCard, Finset.card_biUnion]
@@ -424,8 +426,7 @@ theorem kostka_recursion (γ : YoungDiagram) (μ : Multiset ℕ) (hμ : μ ≠ 0
     apply exists_mem_sdiff_of_ne hf.1 hg.1 hf.2 hg.2 at hfg
     obtain ⟨x, hxγ, hx⟩ := hfg
 
-    wlog hx' : (x ∈ (γ.sub f (sub_le_sub_of_sub_le_next hf.1)).cells \
-      (γ.sub g (sub_le_sub_of_sub_le_next hg.1)).cells) generalizing f g
+    wlog hx' : (x ∈ (γ.sub f).cells \ (γ.sub g).cells) generalizing f g
     · specialize this g hg ?_ f hf ?_ hgs hfs ?_
       · (expose_names; exact h_2)
       · (expose_names; exact h_1)
@@ -436,8 +437,8 @@ theorem kostka_recursion (γ : YoungDiagram) (μ : Multiset ℕ) (hμ : μ ≠ 0
         exact hx
 
     simp only [Finset.mem_sdiff, mem_cells] at hx'
-    let Tf := T.restrict (γ.sub_le f (sub_le_sub_of_sub_le_next hf.1))
-    let Tg := T.restrict (γ.sub_le g (sub_le_sub_of_sub_le_next hg.1))
+    let Tf := T.restrict (γ.sub_le f (sub_cond hf.1))
+    let Tg := T.restrict (γ.sub_le g (sub_cond hg.1))
     have hxm : Tf x.1 x.2 ∈ Tf.content := by exact mem_content_of_mem_cells hx'.1
     rw [hfs, Multiset.erase_fromCounts_of_min μ hμ, restrict_entry _ _ _ _ hx'.1,
       Multiset.mem_remove_of_mem] at hxm
@@ -446,10 +447,55 @@ theorem kostka_recursion (γ : YoungDiagram) (μ : Multiset ℕ) (hμ : μ ≠ 0
       exact mem_content_of_mem_cells hxγ
 
     have hxc : T x.1 x.2 ∈ T.content - Tg.content := by
-      refine mem_content_sdiff_of_mem_sdiff T (γ.sub_le g (sub_le_sub_of_sub_le_next hg.1)) ?_
+      refine mem_content_sdiff_of_mem_sdiff T (γ.sub_le g (sub_cond hg.1)) ?_
       simp [hxγ, hx'.2]
-    rw [hT, hgs, Multiset.erase_fromCounts_of_min μ hμ, Multiset.remove, Multiset.sub_sub_of_sub,
+    rw [hT, hgs, Multiset.erase_fromCounts_of_min μ hμ, Multiset.remove, tsub_tsub_cancel_of_le,
       Multiset.mem_replicate] at hxc
     · rw [← hxc.2] at hxm
       contradiction
     · exact Multiset.replicate_count_le
+
+
+
+
+
+lemma sum_support_subRowLensType_le_card {γ : YoungDiagram} (f : SubRowLensType γ) :
+    ∑ x ∈ f.1.support, f.1 x ≤ γ.card := by
+  rw [card_eq_sum_rowLen, Fin.sum_univ_eq_sum_range]
+  simp only [← rowLens'_eq_rowLen]
+  have hfs : f.1.support ⊆ Finset.range (γ.rowLens.length + 1) := by
+    intro x
+    simp
+    contrapose!
+    intro hx
+    suffices γ.rowLen x = 0 by rw [← Nat.le_zero, ← this]; exact f.2.2 x
+    exact γ.rowLen_eq_zero (by omega)
+  refine le_trans (Finset.sum_le_sum_of_subset hfs) ?_
+  refine Finset.sum_le_sum ?_
+  intro i hi
+  exact f.2.2 i
+
+open Classical in
+lemma sum_subRowLensType_with_sum_eq {γ : YoungDiagram} {μ : Multiset ℕ} {hμ : μ ≠ 0}
+    (h : γ.card = μ.sum) :
+    ∑ f : SubRowLensType γ, kostkaNumber (γ.sub f.1)
+    (μ.erase (min_el μ hμ)) = ∑ f : SubRowLensType γ with (∑ x ∈ f.1.support,
+    f.1 x = min_el μ hμ), kostkaNumber (γ.sub f.1)
+    (μ.erase (min_el μ hμ)) := by
+  symm
+  refine Finset.sum_subset_zero_on_sdiff ?_ ?_ ?_
+  · intro f _; exact Finset.mem_univ f
+  · intro f hf
+    simp only [Finset.mem_sdiff, Finset.mem_univ, Finset.mem_filter, true_and] at hf
+    refine kostka_ne_card _ _ ?_
+    rw [Multiset.sum_erase' (min_el_mem hμ), card_sub _ _ (sub_cond f.2.1) f.2.2]
+    have hcf := sum_support_subRowLensType_le_card f
+    have hmm := Multiset.le_sum_of_mem (min_el_mem hμ)
+    omega
+  · intro _ _; rfl
+
+theorem kostka_recursion' (γ : YoungDiagram) (μ : Multiset ℕ) (hμ : μ ≠ 0) (h0 : 0 ∉ μ)
+    (h : γ.card = μ.sum) :
+    kostkaNumber γ μ = ∑ f : SubRowLensType γ with ∑ x ∈ f.1.support, f.1 x = min_el μ hμ,
+    kostkaNumber (γ.sub f.1) (μ.erase (min_el μ hμ)) := by
+  rw [kostka_recursion _ _ hμ h0 h, sum_subRowLensType_with_sum_eq h]
