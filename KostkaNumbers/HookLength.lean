@@ -20,3 +20,8 @@ theorem hookLength_formula (γ : YoungDiagram) {n : ℕ} (h : γ.card = n) :
     kostkaNumber γ (Multiset.replicate n 1) =
     Nat.factorial n / ∏ x ∈ γ.cells, γ.hookLength x.1 x.2 := by
   sorry
+
+theorem hookLength_formula' (γ : YoungDiagram) {n : ℕ} (h : γ.card = n) :
+    (∏ x ∈ γ.cells, γ.hookLength x.1 x.2) *
+    kostkaNumber γ (Multiset.replicate n 1) = Nat.factorial n := by
+  sorry

@@ -267,6 +267,55 @@ lemma replicate_one_dominates_iff {L : List ℕ} {n : ℕ} (h : L.sum = n)
     rw [hL]
     exact dominates_self
 
+lemma hasdr {r : ℕ} : {i : ℕ | i ≤ r}.toFinset.card = r + 1 := by
+  refine Finset.card_eq_of_equiv_fin ?_
+  use (fun ⟨x, hx⟩ ↦ ⟨x, by
+    simp at hx
+    exact Order.lt_add_one_iff.mpr hx⟩)
+  · use (fun ⟨x, hx⟩ ↦ ⟨x, by
+      simp
+      exact Nat.le_of_lt_succ hx⟩)
+  · intro x
+    simp
+  · intro x
+    simp
+
+lemma hasd {n r : ℕ} : ({i | i.1 ≤ r} : Finset (Fin n)).card ≤ r + 1 := by
+  rw [← hasdr]
+  let e : { x // x ∈ ({i | i.1 ≤ r} : Finset (Fin n))} →
+    { x // x ∈ {i : ℕ | i ≤ r}.toFinset} :=
+    fun ⟨x, hx⟩ ↦ ⟨x.1, by
+      simp at hx
+      simp [hx]⟩
+  suffices Function.Injective e by exact Finset.card_le_card_of_injective this
+  intro x y hxy
+  simp only [Subtype.mk.injEq, Fin.val_inj, Subtype.coe_inj, e] at hxy
+  exact hxy
+
+lemma hasd2 {n r : ℕ} (h : r < n) : ({i | i.1 ≤ r} : Finset (Fin n)).card = r + 1 := by
+  rw [← hasdr]
+  let e : (x : Fin n) → (hx : x ∈ ({i | i.1 ≤ r} : Finset (Fin n))) → ℕ :=
+    fun x _ ↦ x.1
+  refine Finset.card_bij e ?_ ?_ ?_
+  · simp [e]
+  · simp [e, Fin.val_inj]
+  · simp [e]
+    intro i hi
+    use ⟨i, lt_of_le_of_lt hi h⟩
+
+lemma dominates_replicate_one {L : List ℕ} {n : ℕ} (h : L.sum = n)
+    (hp : ∀ x ∈ L, x > 0) : (List.replicate n 1) ⊴ L := by
+  refine dominates_of_forall_lt_min ?_ ?_
+  · intro r hr
+    simp only [List.get_eq_getElem, List.getElem_replicate, Finset.sum_const, smul_eq_mul, mul_one]
+    refine le_trans hasd ?_
+    refine le_trans ?_ (Finset.card_nsmul_le_sum _ _ 1 ?_)
+    · rw [smul_eq_mul, mul_one, hasd2]
+      omega
+    · intro i _
+      exact hp L[i.1] (List.getElem_mem (Fin.val_lt_of_le i (le_refl L.length)))
+  · simp [h]
+
 /-
 Small domination results
 -/

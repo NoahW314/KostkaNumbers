@@ -43,10 +43,10 @@ theorem col_sorted (T : SemistandardYoungTableau γ) (i j : ℕ) (hi : i < γ.co
 
 
 
-lemma map_row (T : SemistandardYoungTableau γ) {i : ℕ} :
-    Multiset.map (fun j : Fin (γ.rowLen i) ↦ T i j.1)
+lemma map_row (f : ℕ → ℕ → ℕ) {i : ℕ} :
+    Multiset.map (fun j : Fin (γ.rowLen i) ↦ f i j.1)
       (Multiset.ofList (List.finRange (γ.rowLen i))) =
-    Multiset.map (fun x : ℕ × ℕ ↦ T x.1 x.2) (γ.row i).val := by
+    Multiset.map (fun x : ℕ × ℕ ↦ f x.1 x.2) (γ.row i).val := by
   let e : (a : Fin (γ.rowLen i)) → (a ∈ (Multiset.ofList (List.finRange (γ.rowLen i)))) →
     (ℕ × ℕ) := fun a ha ↦ (i, a.1)
   refine Multiset.map_eq_map_of_bij_of_nodup _ _ ?_ ?_ e ?_ ?_ ?_ ?_
@@ -70,10 +70,10 @@ lemma map_row (T : SemistandardYoungTableau γ) {i : ℕ} :
   · intro ⟨a, ha⟩ ha'
     simp [e]
 
-lemma map_col (T : SemistandardYoungTableau γ) {j : ℕ} :
-    Multiset.map (fun i : Fin (γ.colLen j) ↦ T i j)
+lemma map_col (f : ℕ → ℕ → ℕ) {j : ℕ} :
+    Multiset.map (fun i : Fin (γ.colLen j) ↦ f i j)
       (Multiset.ofList (List.finRange (γ.colLen j))) =
-    Multiset.map (fun x : ℕ × ℕ ↦ T x.1 x.2) (γ.col j).val := by
+    Multiset.map (fun x : ℕ × ℕ ↦ f x.1 x.2) (γ.col j).val := by
   let e : (a : Fin (γ.colLen j)) → (a ∈ (Multiset.ofList (List.finRange (γ.colLen j)))) →
     (ℕ × ℕ) := fun a ha ↦ (a.1, j)
   refine Multiset.map_eq_map_of_bij_of_nodup _ _ ?_ ?_ e ?_ ?_ ?_ ?_
@@ -98,6 +98,24 @@ lemma map_col (T : SemistandardYoungTableau γ) {j : ℕ} :
     simp [e]
 
 
+
+theorem eq_entry_of_map_row {γ : YoungDiagram} (T : SemistandardYoungTableau γ)
+    (T' : SemistandardYoungTableau γ) (i j : ℕ)
+    (h : Multiset.map (fun x ↦ T x.1 x.2) (γ.row i).val =
+    Multiset.map (fun x ↦ T' x.1 x.2) (γ.row i).val) : T i j = T' i j := by
+  by_cases hij : (i, j) ∈ γ
+  · rw [mem_iff_lt_rowLen] at hij
+    rw [row_sorted T i j hij, row_sorted T' i j hij]
+    congr 1
+    refine List.eq_of_perm_of_sorted ?_ (List.sorted_mergeSort' _ _) (List.sorted_mergeSort' _ _)
+    refine List.Perm.trans (List.mergeSort_perm _ _) ?_
+    refine List.Perm.symm ?_
+    refine List.Perm.trans (List.mergeSort_perm _ _) ?_
+    rw [← Multiset.coe_eq_coe, List.ofFn_eq_map, List.ofFn_eq_map, ← Multiset.map_coe,
+      ← Multiset.map_coe, map_row, map_row]
+    symm
+    exact h
+  · rw [T.zeros hij, T'.zeros hij]
 
 theorem eq_of_missing_row'' {γ γ' : YoungDiagram} (T : SemistandardYoungTableau γ)
     (T' : SemistandardYoungTableau γ') (hγ : γ = γ') (hc : T.content = T'.content) (i₀ : ℕ)
