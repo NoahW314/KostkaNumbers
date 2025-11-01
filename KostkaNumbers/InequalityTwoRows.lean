@@ -1,5 +1,5 @@
 import Mathlib
-import KostkaNumbers.HookLength
+import KostkaNumbers.HookLength.HookLengthFormula
 import KostkaNumbers.FactorialLemma
 import KostkaNumbers.InequalitySpecial
 
@@ -399,7 +399,7 @@ lemma sorted_le_of_exists_set (L : List ℕ) (hL : L.Sorted (· ≤ ·))
           omega
         rw [← List.head_eq_getElem_zero hL0]
         symm
-        exact List.head_cons_tail L hL0
+        exact List.cons_head_tail hL0
 
 
 theorem kostka_two_rows (h2 : γ.rowLens = [n - p, p]) (hn : n ≥ 5)

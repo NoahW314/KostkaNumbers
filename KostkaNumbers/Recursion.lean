@@ -235,11 +235,11 @@ lemma restrict_max_cells_content {γ : YoungDiagram} (T : SemistandardYoungTable
   nth_rw 7 [← restrict_extend T (γ.sub_le (max_cell_len T hTc)
     (sub_cond (max_cell_len_sub T hTc))) (γ.sub_valid (max_cell_len T hTc)
     (max_cell_len_sub T hTc)) (entry_eq_max_el T hTc)]
-  rw [extend_content]
-  · simp only [Multiset.remove, Multiset.count_add, Multiset.count_replicate_self]
-    symm
-    rw [count_max_el_restrict_max_cells, zero_add, Multiset.add_sub_cancel_right]
-  · exact sub_le γ (max_cell_len T hTc) (sub_cond (max_cell_len_sub T hTc))
+  · rw [extend_content]
+    · simp only [Multiset.remove, Multiset.count_add, Multiset.count_replicate_self]
+      symm
+      rw [count_max_el_restrict_max_cells, zero_add, Multiset.add_sub_cancel_right]
+    · exact sub_le γ (max_cell_len T hTc) (sub_cond (max_cell_len_sub T hTc))
   · exact entry_restrict_lt_max_el T hTc
 
 

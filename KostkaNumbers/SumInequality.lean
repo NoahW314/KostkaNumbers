@@ -160,8 +160,7 @@ lemma extractOne_le {f : SubRowLensType γ} {k : ℕ}
   by_cases hi : i = Classical.choose (exists_nonzero hf)
   · rw [hi, Finsupp.single_eq_same]
     exact Nat.one_le_iff_ne_zero.mpr <| Classical.choose_spec (exists_nonzero hf)
-  · push_neg at hi; symm at hi
-    rw [Finsupp.single_eq_of_ne hi]
+  · rw [Finsupp.single_eq_of_ne hi]
     exact Nat.zero_le _
 
 lemma extractOne_sub_add {f : SubRowLensType γ} {k : ℕ}
@@ -315,9 +314,10 @@ lemma kostka_sum_le_kostka_double_sum {k : ℕ} :
 lemma kostka_sum_sub_replicate_le {k : ℕ} (hk : n > k) (hγ : γ.card = n) :
     ∑ f : SubRowLensType γ, kostkaNumber (γ.sub f.1) (Multiset.replicate (n - k) 1) ≤
     kostkaNumber γ (Multiset.replicate n 1) := by
-  induction' k with k ih
-  · rw [tsub_zero, sum_kostka_sub_eq_kostka hγ]
-  · refine le_trans ?_ (ih (by omega))
+  induction k with
+  | zero => rw [tsub_zero, sum_kostka_sub_eq_kostka hγ]
+  | succ k ih =>
+    refine le_trans ?_ (ih (by omega))
     rw [sum_subRowLensSumType ?_ ?_ (k + 1), sum_subRowLensSumType ?_ ?_ k]
     rotate_left 1
     · simp [hγ]
@@ -366,6 +366,12 @@ lemma kostka_sum_sub_replicate_le {k : ℕ} (hk : n > k) (hγ : γ.card = n) :
         simp [subSubFinset, hg, g.2.2, g.2.1]
       · simp [e]
     · simp [hγ]
+    · suffices 1 ∈ Multiset.replicate (n - k) 1 by
+        contrapose! this
+        rw [this]
+        exact Multiset.notMem_zero 1
+      rw [Multiset.mem_replicate]
+      omega
     · rw [Multiset.mem_replicate]
       omega
 
@@ -402,7 +408,7 @@ theorem kostka_ineq (γ : YoungDiagram) (μ : Multiset ℕ) (n : ℕ)
       rw [← hγ, card_eq_sum_rowLens, hab]
       simp
     rw [ha] at hab
-    refine kostka_ineq_two_rows hab (by omega) ?_ hγ h hμ ?_
+    refine kostka_ineq_two_rows hab (by omega) ?_ hγ h hμ h0 ?_
     · by_contra! hb0
       simp only [hb0, tsub_zero] at hab
       have h0 : 0 ∈ γ.rowLens := by simp [hab]

@@ -1,6 +1,6 @@
 import Mathlib
 import KostkaNumbers.Basic
-import KostkaNumbers.HookLength
+import KostkaNumbers.HookLength.HookLengthFormula
 
 
 open YoungDiagram SemistandardYoungTableau Kostka

@@ -10,11 +10,13 @@ namespace YoungDiagram
 lemma antitone_sub_of_antitone (f g : ℕ →₀ ℕ)
     (h : ∀ i, f i - g i ≥ f (i + 1) - g (i + 1)) : Antitone (f - g) := by
   intro i j
-  induction' j with j ih
-  · intro hi
+  induction j with
+  | zero =>
+    intro hi
     rw [nonpos_iff_eq_zero] at hi
     rw [hi]
-  · intro hij
+  | succ j ih =>
+    intro hij
     by_cases hij' : i = j + 1
     · rw [hij']
     specialize ih (by omega)

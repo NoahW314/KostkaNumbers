@@ -210,11 +210,11 @@ lemma set_rowLen_ge_nonempty (hμ : μ ≠ 0) (hd : γ.rowLens ⊵ (Multiset.sor
   use 0; rw [Set.mem_setOf]
   refine le_trans (min_el_le hμ ⟨0, by simp [Nat.pos_iff_ne_zero, hμ]⟩) ?_
   rw [← γ.get_rowLens]
-  refine get_zero_ge_of_dominates hd ?_ ?_
-  rw [γ.length_rowLens]
-  rw [← mem_iff_lt_colLen]
-  obtain ⟨x, hx⟩ := exists_of_not_bot hμ h h0
-  exact γ.up_left_mem (Nat.zero_le x.1) (Nat.zero_le x.2) hx
+  · refine get_zero_ge_of_dominates hd ?_ ?_
+  · rw [γ.length_rowLens]
+    rw [← mem_iff_lt_colLen]
+    obtain ⟨x, hx⟩ := exists_of_not_bot hμ h h0
+    exact γ.up_left_mem (Nat.zero_le x.1) (Nat.zero_le x.2) hx
 
 lemma set_rowLen_ge_bddAbove (hμ : μ ≠ 0) (h0 : 0 ∉ μ) :
     BddAbove {j : ℕ | γ.rowLen j ≥ min_el μ hμ} := by
@@ -316,7 +316,7 @@ theorem remove_bottom_card_eq_erase_min_el_sum (hμ : μ ≠ 0)
     intro i hi
     exact le_trans (min_el_le_rowLen_sup hμ hd h h0) (γ.rowLen_anti i j hi)
   let h2 := h
-  rw [← Multiset.sum_erase (min_el_mem hμ), card_eq_sum_rowLens'] at h
+  rw [← Multiset.sum_erase (min_el_mem hμ), card_eq_sum_rowLen] at h
   have hjfl : j < (List.ofFn (remove_bottom_rowLen γ hμ)).length := by
     simp only [List.length_ofFn]
     specialize hj (γ.colLen 0)
@@ -335,7 +335,7 @@ theorem remove_bottom_card_eq_erase_min_el_sum (hμ : μ ≠ 0)
       Finset.univ := by
     exact Finset.mem_univ _
   have hrlfl : (List.ofFn (remove_bottom_rowLen γ hμ)).length = γ.rowLens.length := by simp
-  rw [card_eq_sum_rowLens, remove_bottom, sum_rowLen_ofRowLens,
+  rw [card_eq_sum_rowLens_get, remove_bottom, sum_rowLen_ofRowLens,
     ← Finset.sum_erase_add _ _ hjflm]
   · have hjrl : j < γ.rowLens.length + 1 := by
       rw [← hrlfl]
@@ -858,7 +858,7 @@ lemma sSup_rowLen_le_sort_erase_length (hμ : μ ≠ 0)
     exact Nat.lt_irrefl (γ.colLen 0)
   · rw [← Fin.sum_univ_getElem]
     simp only [← List.get_eq_getElem]
-    rw [← card_eq_sum_rowLens, h, ← Multiset.sum_coe, Multiset.sort_eq]
+    rw [← card_eq_sum_rowLens_get, h, ← Multiset.sum_coe, Multiset.sort_eq]
   · intro i
     refine γ.pos_of_mem_rowLens _ ?_
     exact List.get_mem γ.rowLens i

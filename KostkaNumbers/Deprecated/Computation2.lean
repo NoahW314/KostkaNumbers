@@ -95,7 +95,7 @@ def recUnion_coe (γ : YoungDiagram) : recUnionSet γ → recUnionType_c γ := f
 
 instance decidablEqRecUnionType_c (γ : YoungDiagram) : DecidableEq (recUnionType_c γ) := by
   unfold recUnionType_c
-  exact instDecidableEqOfLawfulBEq
+  exact Subtype.instDecidableEq
 
 instance recUnionFintype_c (γ : YoungDiagram) : Fintype (recUnionType_c γ) :=
   ⟨Finset.image (recUnion_coe γ) Finset.univ, by

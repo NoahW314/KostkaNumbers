@@ -80,7 +80,7 @@ theorem dominates_of_kostka_pos (hk : 0 < kostkaNumber γ μ) :
   ext x
   rw [Multiset.count_eq_of_nodup, Multiset.count_eq_of_nodup]
   · congr 1
-    simp [Finset.mem_sum]
+    simp [Multiset.mem_sum]
     constructor
     · intro ⟨hx, hTr⟩
       use ⟨T x.1 x.2, by simp [entry_lt_card hT hx]⟩
@@ -306,7 +306,7 @@ lemma sub_max_support_sum (γ : YoungDiagram) {μ : Multiset ℕ}
       rw [Finset.sum_sdiff_eq_sub, Finset.sum_range_sub', Finset.sum_range_sub',
         Nat.cast_sub (le_of_lt (min_el_gt_rowLens'_jth_add_one γ hμ h0))]
       · simp
-      · rw [Finset.range_subset]
+      · rw [Finset.range_subset_range]
         exact jth_lt_colLen γ hd hμ h0
     refine Finset.sum_subset_zero_on_sdiff ?_ ?_ (by intro _ _; rfl)
     · intro x

@@ -31,8 +31,8 @@ def hookDiagram (n : ℕ) := if h0 : n = 0 then (⊥ : YoungDiagram) else
     simp [← hax, ha]
     intro ha; use x.2
     simp [← ha.1, ha.2]
-  rw [Or.comm]
   simp [h0, h1, hookDiagram, ofRowLens, YoungDiagram.cellsOfRowLens, hx, ha]
+
 
 @[simp] lemma hookDiagram_zero : hookDiagram 0 = ⊥ := by simp [hookDiagram]
 
@@ -188,10 +188,10 @@ theorem kostka_hook (μ : Multiset ℕ) (h0 : 0 ∉ μ) (hμ : μ.sum ≥ 2) :
       · rw [Multiset.card_erase_of_mem]
         · simp; omega
         · exact Multiset.mem_of_mem_remove _ _ hm
-      · exact hx0
       ⟩
     · simp only [Set.coe_setOf, coe_eval, Subtype.mk.injEq, f]
       exact hook_ofMultiset10
+    · exact hx0
 
 theorem kostka_hook_replicate (n : ℕ) (hn : n ≥ 2) :
     kostkaNumber (hookDiagram n) (Multiset.replicate n 1) = n - 1 := by

@@ -84,6 +84,16 @@ def equivRowLens : YoungDiagram ≃ {f : ℕ →₀ ℕ | Antitone f} where
   push_neg at hi
   exact hi
 
+lemma rowLens'_le {γ γ' : YoungDiagram} (h : γ' ≤ γ) : γ'.rowLens' ≤ γ.rowLens' := by
+  intro i
+  by_cases h0 : γ'.rowLens' i = 0
+  · omega
+  suffices (i, γ'.rowLens' i - 1) ∈ γ by
+    rw [mem_iff_lt_rowLen, ← rowLens'_eq_rowLen] at this
+    omega
+  apply h
+  rw [γ'.mem_cells, mem_iff_lt_rowLen, ← rowLens'_eq_rowLen]
+  omega
 
 lemma rowLens'_eq_iff {γ γ' : YoungDiagram} : γ.rowLens' = γ'.rowLens' ↔ γ = γ' := by
   constructor

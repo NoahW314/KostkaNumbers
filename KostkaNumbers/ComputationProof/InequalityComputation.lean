@@ -115,11 +115,12 @@ theorem kostka_ineq_222 (hhd : γ ≠ horizontalDiagram n) (h : γ.card = μ.sum
       refine List.eq_of_perm_of_sorted ?_ γ.rowLens_sorted (by simp)
       rw [← Multiset.coe_eq_coe, h6]
       rfl
-    refine kostka_ineq_two_rows hγ ?_ (by norm_num) ?_ h ?_ ?_
+    refine kostka_ineq_two_rows hγ ?_ (by norm_num) ?_ h ?_ ?_ ?_
     · rw [hn]; norm_num1
     · rw [card_eq_sum_rowLens, hγ, hn]
       norm_num
     · simp [hμ]
+    · exact h0
     · simp only [min_el_triple (by rfl) (by rfl), hμ]
       rfl
 

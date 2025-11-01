@@ -64,7 +64,7 @@ lemma rowLens_eq_iff {γ γ' : YoungDiagram} : γ.rowLens = γ'.rowLens ↔ γ =
   · rw [mem_cells, mem_iff_lt_rowLen, ← get_rowLens]
     · simp only [h]
       rw [get_rowLens, ← mem_iff_lt_rowLen, ← mem_cells]
-      exact hx
+    · exact hx
   · let hx' := hx
     rw [length_rowLens, ← mem_iff_lt_colLen] at hx
     rw [h, length_rowLens, ← mem_iff_lt_colLen] at hx'
@@ -114,7 +114,7 @@ lemma cells_add_sub_col (j : ℕ) : (γ.cells.val - (γ.col j).val) + (γ.col j)
 
 lemma card_sdiff {γ' : YoungDiagram} (h : γ' ≤ γ) :
     γ.card - γ'.card = (γ.cells \ γ'.cells).card := by
-  rw [YoungDiagram.card, Finset.card_sdiff h]
+  rw [YoungDiagram.card, Finset.card_sdiff_of_subset h]
 
 
 lemma rowLen_eq_filter {n : ℕ} : γ.rowLen n = (Multiset.filter

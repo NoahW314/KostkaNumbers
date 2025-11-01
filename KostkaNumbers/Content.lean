@@ -70,11 +70,12 @@ lemma entry_lt_rowLens_card (h : T.content = (Multiset.ofList γ.rowLens).fromCo
 
 
 lemma entry_ge_col {i j : ℕ} (h : (i, j) ∈ γ) : T i j ≥ i := by
-  induction' i with i ih
-  · simp
-  calc T (i + 1) j
-    _ > T i j := T.col_strict (lt_add_one i) h
-    _ ≥ i := by refine ih ?_; exact γ.up_left_mem (le_of_lt (lt_add_one i)) (by rfl) h
+  induction i with
+  | zero => simp
+  | succ i ih =>
+    calc T (i + 1) j
+      _ > T i j := T.col_strict (lt_add_one i) h
+      _ ≥ i := by refine ih ?_; exact γ.up_left_mem (le_of_lt (lt_add_one i)) (by rfl) h
 
 
 lemma highestWeight_content : (highestWeight γ).content =
