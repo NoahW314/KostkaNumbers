@@ -1,100 +1,65 @@
+/-
+Copyright (c) 2026 Noah Walker. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Noah Walker
+-/
+
 import Mathlib
 
 namespace Multiset
 
 section Remove
 
-variable {α : Type*} [DecidableEq α]
+variable {α : Type*} [DecidableEq α] (S : Multiset α) (a : α)
 
-def remove (S : Multiset α) (a : α) := S - (replicate (count a S) a)
+def remove := S - (replicate (count a S) a)
 
-@[simp] lemma remove_bot {a : α} : remove (⊥ : Multiset α) a = ⊥ := by
+@[simp] lemma remove_bot : remove (⊥ : Multiset α) a = ⊥ := by
   simp [remove]
 
-@[simp] lemma remove_zero {a : α} : remove 0 a = 0 := by
+@[simp] lemma remove_zero : remove 0 a = 0 := by
   simp [remove]
 
-@[simp] lemma notMem_of_remove (S : Multiset α) (a : α) : a ∉ S.remove a := by
-  rw [remove, ← count_eq_zero, count_sub, count_replicate]
-  simp
+@[grind ., simp]
+lemma notMem_of_remove : a ∉ S.remove a := by
+  simp [remove, ← count_eq_zero]
 
-lemma remove_of_notMem (S : Multiset α) (a : α) (ha : a ∉ S) : S.remove a = S := by
-  rw [← count_pos, Nat.pos_iff_ne_zero] at ha; push_neg at ha
+lemma remove_of_notMem (ha : a ∉ S) : S.remove a = S := by
+  rw [← count_pos, Nat.pos_iff_ne_zero] at ha
+  push Not at ha
   rw [remove, ha, replicate_zero, Multiset.sub_zero]
 
-lemma mem_remove_of_ne (S : Multiset α) {a b : α} (h : a ≠ b) : b ∈ S.remove a ↔ b ∈ S := by
+lemma mem_remove_of_ne {a b : α} (h : a ≠ b) : b ∈ S.remove a ↔ b ∈ S := by
   simp [remove, mem_sub, count_replicate, h, count_pos]
 
-lemma mem_remove_of_mem_ne {S : Multiset α} {a b : α} (h : b ∈ S) (hab : a ≠ b) :
-    b ∈ S.remove a := by
-  exact (mem_remove_of_ne S hab).mpr h
+variable {S : Multiset α} {a b : α}
 
-lemma mem_remove_of_mem {S : Multiset α} (a b : α) (h : b ∈ S) : b ∈ S.remove a ↔ a ≠ b := by
-  constructor
-  · contrapose!; intro hab; rw [hab]; exact notMem_of_remove S b
-  · intro hab
-    exact mem_remove_of_mem_ne h hab
+lemma mem_remove_of_mem (b : α) (h : a ∈ S) : a ∈ S.remove b ↔ b ≠ a := by
+  grind [mem_remove_of_ne]
 
-lemma mem_of_mem_remove {S : Multiset α} (a b : α) (h : b ∈ S.remove a) : b ∈ S := by
+lemma mem_of_mem_remove (h : b ∈ S.remove a) : b ∈ S := by
   rw [← count_pos]
   rw [remove, mem_sub] at h
   exact lt_of_le_of_lt (Nat.zero_le _) h
 
+lemma insert_remove_toFinset (ha : a ∈ S) : insert a (S.remove a).toFinset = S.toFinset := by
+  grind [mem_of_mem_remove, mem_remove_of_ne]
 
-lemma insert_remove_toFinset (S : Multiset α) (a : α) (ha : a ∈ S) : S.toFinset =
-    insert a (S.remove a).toFinset := by
-  ext x
-  rw [mem_toFinset, Finset.mem_insert]
-  constructor
-  · intro h
-    by_cases hx0 : x = a
-    · left; exact hx0
-    right
-    rw [mem_toFinset, remove, mem_sub, count_replicate]
-    push_neg at hx0; symm at hx0
-    simp [hx0]
-    exact count_pos.mpr h
-  · intro h
-    by_cases hx0 : x = a
-    · rw [hx0]; exact ha
-    · push_neg at hx0
-      simp only [hx0] at h
-      rw [false_or, mem_toFinset, remove, mem_sub, count_replicate] at h
-      symm at hx0
-      simp [hx0] at h
-      exact count_pos.mp h
-
-lemma remove_toFinset (S : Multiset α) (a : α) :
-    (S.remove a).toFinset = S.toFinset.erase a := by
+@[grind =]
+lemma remove_toFinset (S : Multiset α) (a : α) : (S.remove a).toFinset = S.toFinset.erase a := by
   by_cases ha : a ∈ S
-  · rw [insert_remove_toFinset S a ha, Finset.erase_insert]
-    rw [mem_toFinset]
-    exact notMem_of_remove S a
-  · rw [remove_of_notMem S a ha, Finset.erase_eq_of_notMem]
-    rw [mem_toFinset]
-    exact ha
+  · grind [insert_remove_toFinset]
+  · grind [remove_of_notMem]
 
 lemma remove_toFinset_card (S : Multiset α) (a : α) (ha : a ∈ S) :
-    (S.remove a).toFinset.card = S.toFinset.card - 1 := by
-  rw [remove_toFinset S a, Finset.card_erase_of_mem]
-  rw [mem_toFinset]
-  exact ha
+    (S.remove a).toFinset.card = S.toFinset.card - 1 := by grind
 
 lemma remove_zero_sum (μ : Multiset ℕ) : μ.sum = (μ.remove 0).sum := by
-  by_cases h0 : 0 ∉ μ
+  by_cases! h0 : 0 ∉ μ
   · rw [remove_of_notMem μ 0 h0]
-
-  push_neg at h0
-  simp [Finset.sum_multiset_count, remove, count_replicate]
-  rw [insert_remove_toFinset μ 0 h0, Finset.sum_insert_zero]
-  · refine Finset.sum_congr (rfl) ?_
-    intro x hx
-    rw [mem_toFinset] at hx
-    have hx0 : 0 ≠ x := by
-      contrapose! hx
-      rw [← hx, ← remove]
-      exact notMem_of_remove μ 0
-    simp [hx0]
+  simp only [Finset.sum_multiset_count, smul_eq_mul, remove, count_sub, count_replicate]
+  rw [← insert_remove_toFinset h0, Finset.sum_insert_zero]
+  · exact Finset.sum_congr rfl (by grind)
   · rw [mul_zero]
 
 lemma cons_remove {μ : Multiset ℕ} (a : ℕ) : (a ::ₘ μ).remove a = μ.remove a := by

@@ -1,55 +1,54 @@
+/-
+Copyright (c) 2026 Noah Walker. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Noah Walker
+-/
+
 import Mathlib
 import KostkaNumbers.Basic
 import KostkaNumbers.KostkaPos
 import KostkaNumbers.ComputationProof.RowColEq
 import KostkaNumbers.ComputationProof.Zeros
+import KostkaNumbers.SmallDominate
 
 open Kostka SemistandardYoungTableau YoungDiagram
 
-lemma sorted_pair {a b : ℕ} (h : a ≥ b) : List.Sorted (· ≥ ·) [a, b] := by simp [h]
+lemma sorted_pair {a b : ℕ} (h : a ≥ b) : List.SortedGE [a, b] :=
+  List.Pairwise.sortedGE (by simp [h])
 
 lemma sorted_triple {a b c : ℕ} (hab : a ≥ b) (hbc : b ≥ c) :
-    List.Sorted (· ≥ ·) [a, b, c] := by
-  simp [hab, hbc, le_trans hbc hab]
+    List.SortedGE [a, b, c] := List.Pairwise.sortedGE (by simp [hab, hbc, le_trans hbc hab])
 
 
-lemma sort_pair_ge {a b : ℕ} (hab : a ≥ b) :
-    ({a, b} : Multiset ℕ).toList.mergeSort (· ≥ ·) = [a, b] := by
-  refine List.eq_of_perm_of_sorted ?_ (List.sorted_mergeSort' _ _) (sorted_pair hab)
-  refine List.Perm.trans (List.mergeSort_perm _ _) ?_
-  rw [← Multiset.coe_eq_coe, Multiset.coe_toList]
-  simp [← Multiset.cons_coe]
+lemma sort_pair_ge {a b : ℕ} (hab : a ≥ b) : ({a, b} : Multiset ℕ).sort (· ≥ ·) = [a, b] := by
+  refine List.Perm.eq_of_pairwise' (List.pairwise_mergeSort' _ _) (sorted_pair hab).pairwise ?_
+  exact List.Perm.trans (List.mergeSort_perm _ _) (by rfl)
 
 lemma sort_triple_le {a b c : ℕ} (hab : a ≥ b) (hbc : b ≥ c) :
-    (({a, b, c} : Multiset ℕ).toList.mergeSort (· ≤ ·)) = [c, b, a] := by
-  refine List.eq_of_perm_of_sorted ?_ (List.sorted_mergeSort' _ _) ?_
+    (({a, b, c} : Multiset ℕ).sort (· ≤ ·)) = [c, b, a] := by
+  have habc : [a, b, c].reverse = [c, b, a] := by simp
+  refine List.Perm.eq_of_pairwise' (List.pairwise_mergeSort' _ _) ?_ ?_
+  · rw [← habc, List.pairwise_reverse]
+    exact (sorted_triple hab hbc).pairwise
   · refine List.Perm.trans (List.mergeSort_perm _ _) ?_
-    rw [← Multiset.coe_eq_coe, Multiset.coe_toList]
-    simp only [Multiset.insert_eq_cons, ← Multiset.cons_coe, Multiset.coe_nil]
-    rw [Multiset.cons_swap, Multiset.cons_swap c b, Multiset.cons_inj_right,
-      Multiset.cons_swap, Multiset.cons_zero]
-  · simp [hab, hbc, le_trans hbc hab]
+    rw [← habc, List.perm_reverse]
 
 lemma sort_triple_ge {a b c : ℕ} (hab : a ≥ b) (hbc : b ≥ c) :
-    (({a, b, c} : Multiset ℕ).toList.mergeSort (· ≥ ·)) = [a, b, c] := by
-  refine List.eq_of_perm_of_sorted ?_ (List.sorted_mergeSort' _ _) (sorted_triple hab hbc)
-  refine List.Perm.trans (List.mergeSort_perm _ _) ?_
-  rw [← Multiset.coe_eq_coe, Multiset.coe_toList]
-  simp [← Multiset.cons_coe]
+    (({a, b, c} : Multiset ℕ).sort (· ≥ ·)) = [a, b, c] :=
+  List.Perm.eq_of_pairwise' (List.pairwise_mergeSort' _ _) (sorted_triple hab hbc).pairwise <|
+    List.Perm.trans (List.mergeSort_perm _ _) (by rfl)
 
 
 
-@[simp] lemma max_el_triple {a b c : ℕ} (hab : a ≥ b) (hbc : b ≥ c) :
-    max_el ({a, b, c} : Multiset ℕ) (by simp) = a := by
-  suffices max_el (Multiset.ofList (({a, b, c} : Multiset ℕ)).toList) (by simp) = a by
-    simp only [Multiset.coe_toList] at this
-    exact this
-  unfold max_el
-  simp only [Multiset.coe_sort, sort_triple_le hab hbc]
-  simp
+@[simp] lemma max_triple {a b c : ℕ} (hab : a ≥ b) (hbc : b ≥ c) :
+    ({a, b, c} : Multiset ℕ).toList.max (by simp) = a := by
+  rw! [← Multiset.sort_getElem_zero_eq_max, sort_triple_ge hab hbc]
+  rfl
 
-
-
+@[simp] lemma min_triple {a b c : ℕ} (hab : a ≥ b) (hbc : b ≥ c) :
+    ({a, b, c} : Multiset ℕ).toList.min (by simp) = c := by
+  rw! [← Multiset.sort_getElem_zero_eq_min, sort_triple_le hab hbc]
+  rfl
 
 /-
 Cases for partitions of 4
@@ -68,13 +67,9 @@ lemma g22u211 (T : SemistandardYoungTableau (ofRowLens [2, 2] (sorted_pair (by r
   intro i hi j
   by_cases hi' : i = 0
   · have hTj : Tg22u211 0 j = 0 := by
-      have hj : j = 0 ∨ j = 1 ∨ j > 1 := by omega
-      rcases hj with hj|hj|hj
-      · rw [hj, Tg22u211]
-      · rw [hj, Tg22u211]
-      · have hj0 : j ≠ 0 := by omega
-        have hj1 : j ≠ 1 := by exact ne_of_gt hj
-        simp [hj0, hj1, Tg22u211]
+      have hj : j = 0 ∨ j = 1 ∨ j > 1 := by lia
+      unfold Tg22u211
+      grind
     rw [hi', hTj]
     have hje : j < 2 ↔ (0, j) ∈ (ofRowLens [2, 2] (sorted_pair (by rfl))) := by
       rw [mem_iff_lt_rowLen, ← get_rowLens]
@@ -82,32 +77,27 @@ lemma g22u211 (T : SemistandardYoungTableau (ofRowLens [2, 2] (sorted_pair (by r
       · rw [rowLens_length_ofRowLens]
         all_goals simp
     by_cases hj : j < 2
-    · rw [zero_iff_of_mem T ?_ hT (hje.mp hj)]
-      · rw [max_el_triple one_le_two (by rfl)]
+    · rw [entry_eq_zero_iff_of_mem T ?_ hT (hje.mp hj)]
+      · rw [max_triple one_le_two (by rfl)]
         simp only [hj, and_self]
-      simp
+      · simp
     · refine T.zeros ?_
-      rw [← hje]; exact hj
+      rwa [← hje]
   · simp only [Tg22u211, hi', imp_false, IsEmpty.forall_iff, hi]
     refine T.zeros ?_
     rw [mem_iff_lt_rowLen]
     suffices (ofRowLens [2, 2] (sorted_pair (by rfl))).rowLen i = 0 by
       rw [this]
       exact Nat.not_lt_zero j
-    refine rowLen_ofRowLens_eq_zero ?_ ?_
-    · simp
-    · simp
-      omega
+    exact rowLen_ofRowLens_eq_zero (by simp) (by simp; lia)
 
 lemma kostka_g22u211 : kostkaNumber (ofRowLens [2, 2] (sorted_pair (by rfl)))
     ({2, 1, 1} : Multiset ℕ) = 1 := by
   have hk : kostkaNumber (ofRowLens [2, 2] (sorted_pair (by rfl)))
       ({2, 1, 1} : Multiset ℕ) ≥ 1 := by
-    suffices kostkaNumber (ofRowLens [2, 2] (sorted_pair (by rfl)))
-      ({2, 1, 1} : Multiset ℕ) > 0 by exact this
-    rw [gt_iff_lt, kostka_pos_iff_dominates, rowLens_ofRowLens_eq_self]
-    · rw [← Multiset.coe_toList ({2, 1, 1} : Multiset ℕ), Multiset.coe_sort,
-        sort_triple_ge (one_le_two) (by rfl), pair_dominates_triple]
+    refine Nat.le_of_pred_lt ?_
+    rw [Nat.pred_eq_sub_one, tsub_self, kostka_pos_iff_dominates, rowLens_ofRowLens_eq_self]
+    · rw [sort_triple_ge (one_le_two) (by rfl), pair_dominates_triple]
       simp
     all_goals simp
   refine antisymm hk ?_
@@ -115,8 +105,7 @@ lemma kostka_g22u211 : kostkaNumber (ofRowLens [2, 2] (sorted_pair (by rfl)))
     ge_iff_le, Finset.card_le_one_iff]
   simp only [Set.Finite.mem_toFinset, Set.mem_setOf_eq]
   intro T T' hT hT'
-  refine eq_of_missing_row' T T' ?_ 1 (g22u211 T hT) (g22u211 T' hT')
-  rw [hT, hT']
+  exact eq_of_missing_row' T T' (by rw [hT, hT']) 1 (g22u211 T hT) (g22u211 T' hT')
 
 /-
 Cases for partitions of 5
@@ -130,8 +119,7 @@ def Tg311u221 : ℕ → ℕ → ℕ
   | 2, 0 => 2
   | _, _ => 0
 
-lemma st311 : List.Sorted (· ≥ ·) [3, 1, 1] := by
-  exact sorted_triple (by omega) (by rfl)
+lemma st311 : List.SortedGE [3, 1, 1] := sorted_triple (by lia) (by rfl)
 
 lemma g311u221 (T : SemistandardYoungTableau (ofRowLens [3, 1, 1] st311))
     (hT : T.content = ({2, 2, 1} : Multiset ℕ).fromCounts) :
@@ -145,17 +133,16 @@ lemma g311u221 (T : SemistandardYoungTableau (ofRowLens [3, 1, 1] st311))
       exact notMem_bot (0, 0)
     simp [mem_ofRowLens]
   have h2 : T 2 0 = 2 := by
-    have h20 : (2, 0) ∈ ofRowLens [3, 1, 1] st311 := by
-      simp [mem_ofRowLens]
+    have h20 : (2, 0) ∈ ofRowLens [3, 1, 1] st311 := by simp [mem_ofRowLens]
     refine antisymm (entry_ge_col h20) ?_
-    have hc : T 2 0 ∈ T.content := mem_content_of_mem_cells h20
-    simp [hT, Multiset.mem_fromCounts_iff] at hc
-    exact Nat.le_of_lt_succ hc
+    have hc : T 2 0 ∈ T.content := mem_content_of_mem h20
+    refine Nat.le_of_lt_succ ?_
+    simpa [hT, Multiset.mem_fromCounts_iff] using hc
   fun_cases Tg311u221
   · contradiction
   · contradiction
   · contradiction
-  · suffices 0 < T 1 0 ∧ T 1 0 < 2 by omega
+  · suffices 0 < T 1 0 ∧ T 1 0 < 2 by lia
     constructor
     · nth_rw 1 [← h0]
       refine T.col_strict (zero_lt_one) ?_
@@ -170,15 +157,14 @@ lemma g311u221 (T : SemistandardYoungTableau (ofRowLens [3, 1, 1] st311))
     intro hi'
     rw [← Nat.pos_iff_ne_zero] at hi
     interval_cases i
-    all_goals simp_all; omega
+    all_goals simp_all; lia
 
 lemma kostka_g311u221 : kostkaNumber (ofRowLens [3, 1, 1] st311)
     ({2, 2, 1} : Multiset ℕ) = 1 := by
   have hk : kostkaNumber (ofRowLens [3, 1, 1] st311) ({2, 2, 1} : Multiset ℕ) ≥ 1 := by
-    suffices kostkaNumber (ofRowLens [3, 1, 1] st311) ({2, 2, 1} : Multiset ℕ) > 0 by exact this
-    rw [gt_iff_lt, kostka_pos_iff_dominates, rowLens_ofRowLens_eq_self]
-    · rw [← Multiset.coe_toList ({2, 2, 1} : Multiset ℕ), Multiset.coe_sort,
-        sort_triple_ge (by rfl) (one_le_two), triple_dominates_triple]
+    refine Nat.le_of_pred_lt ?_
+    rw [Nat.pred_eq_sub_one, tsub_self, kostka_pos_iff_dominates, rowLens_ofRowLens_eq_self]
+    · rw [sort_triple_ge (by rfl) (one_le_two), triple_dominates_triple]
       simp
     all_goals simp
   refine antisymm hk ?_
@@ -193,15 +179,15 @@ lemma kostka_g311u221 : kostkaNumber (ofRowLens [3, 1, 1] st311)
 
 
 
-lemma st32 : List.Sorted (· ≥ ·) [3, 2] := by
-  exact sorted_pair (by omega)
+lemma st32 : List.SortedGE [3, 2] := sorted_pair (by lia)
 
 lemma g32u221 (T T' : SemistandardYoungTableau (ofRowLens [3, 2] st32))
     (hT : T.content = ({2, 2, 1} : Multiset ℕ).fromCounts)
     (hT' : T'.content = ({2, 2, 1} : Multiset ℕ).fromCounts) :
     T = T' ↔ T 0 2 = T' 0 2 := by
   constructor
-  · intro h; rw [h]
+  · intro h
+    rw [h]
   · intro h
     refine eq_of_missing_row T T' ?_ 1 ?_
     · rw [hT, hT']
@@ -210,12 +196,12 @@ lemma g32u221 (T T' : SemistandardYoungTableau (ofRowLens [3, 2] st32))
       · simp only [mem_ofRowLens, List.length_cons, List.length_nil, zero_add,
           Nat.reduceAdd] at hij
         obtain ⟨hi2, hij⟩ := hij
-        have hi0 : i = 0 := by omega
-        rw [hi0]; simp [hi0] at hij
+        have hi0 : i = 0 := by lia
+        rw [hi0]
+        simp [hi0] at hij
         have h01 : (0, 1) ∈ (ofRowLens [3, 2] st32) := by simp [mem_ofRowLens]
-        have hμ : ({2, 2, 1} : Multiset ℕ) ≠ 0 := by simp
-        have hmax : max_el ({2, 2, 1} : Multiset ℕ) hμ = 2 := by
-          exact max_el_triple (by rfl) (one_le_two)
+        have hμ : ({2, 2, 1} : Multiset ℕ).toList ≠ [] := by simp
+        have hmax : ({2, 2, 1} : Multiset ℕ).toList.max hμ = 2 := max_triple (by rfl) (one_le_two)
         have hγ : (ofRowLens [3, 2] st32) ≠ ⊥ := by
           contrapose! h01
           rw [h01]
@@ -223,8 +209,8 @@ lemma g32u221 (T T' : SemistandardYoungTableau (ofRowLens [3, 2] st32))
         interval_cases j
         · rw [top_left_of_content_fromCounts hγ hT,
             top_left_of_content_fromCounts hγ hT']
-        · rw [(zero_iff_of_mem T hμ hT h01).mpr,
-            (zero_iff_of_mem T' hμ hT' h01).mpr]
+        · rw [(entry_eq_zero_iff_of_mem T hμ hT h01).mpr,
+            (entry_eq_zero_iff_of_mem T' hμ hT' h01).mpr]
           all_goals rw [hmax]; simp
         · exact h
       · rw [T.zeros hij, T'.zeros hij]
@@ -232,18 +218,14 @@ lemma g32u221 (T T' : SemistandardYoungTableau (ofRowLens [3, 2] st32))
 lemma g32u221_02_eq_one_or_two (T : SemistandardYoungTableau (ofRowLens [3, 2] st32))
     (hT : T.content = ({2, 2, 1} : Multiset ℕ).fromCounts) :
     T 0 2 = 1 ∨ T 0 2 = 2 := by
-  suffices 0 < T 0 2 ∧ T 0 2 < 3 by omega
-  have hμ : ({2, 2, 1} : Multiset ℕ) ≠ 0 := by simp
-  have hmax : max_el ({2, 2, 1} : Multiset ℕ) hμ = 2 := by
-    exact max_el_triple (by rfl) (one_le_two)
+  suffices 0 < T 0 2 ∧ T 0 2 < 3 by lia
+  have hμ : ({2, 2, 1} : Multiset ℕ).toList ≠ [] := by simp
+  have hmax : ({2, 2, 1} : Multiset ℕ).toList.max hμ = 2 := max_triple (by rfl) (one_le_two)
   constructor
-  · rw [Nat.pos_iff_ne_zero, ne_eq, zero_iff_of_mem T hμ hT, hmax]
+  · rw [Nat.pos_iff_ne_zero, ne_eq, entry_eq_zero_iff_of_mem T hμ hT, hmax]
     all_goals simp [mem_ofRowLens]
-  · have hT02 : T 0 2 ∈ T.content := by
-      refine mem_content_of_mem_cells ?_
-      simp [mem_ofRowLens]
-    simp [hT, Multiset.mem_fromCounts_iff] at hT02
-    exact hT02
+  · have hT02 : T 0 2 ∈ T.content := mem_content_of_mem (by simp [mem_ofRowLens])
+    simpa [hT, Multiset.mem_fromCounts_iff] using hT02
 
 lemma kostka_g32u221_le : kostkaNumber (ofRowLens [3, 2] st32)
     ({2, 2, 1} : Multiset ℕ) ≤ 2 := by
@@ -255,10 +237,10 @@ lemma kostka_g32u221_le : kostkaNumber (ofRowLens [3, 2] st32)
   rw [g32u221 T' T'' hT' hT'']
   rw [g32u221 T T' hT hT'] at hTT'
   rw [g32u221 T T'' hT hT''] at hTT''
-  let h02 := g32u221_02_eq_one_or_two T hT
-  let h02' := g32u221_02_eq_one_or_two T' hT'
-  let h02'' := g32u221_02_eq_one_or_two T'' hT''
-  omega
+  have h02 := g32u221_02_eq_one_or_two T hT
+  have h02' := g32u221_02_eq_one_or_two T' hT'
+  have h02'' := g32u221_02_eq_one_or_two T'' hT''
+  lia
 
 
 
@@ -275,8 +257,7 @@ def Tg411u222 : ℕ → ℕ → ℕ
   | 2, 0 => 2
   | _, _ => 0
 
-lemma st411 : List.Sorted (· ≥ ·) [4, 1, 1] := by
-  exact sorted_triple (by omega) (by rfl)
+lemma st411 : List.SortedGE [4, 1, 1] := sorted_triple (by lia) (by rfl)
 
 lemma g411u222 (T : SemistandardYoungTableau (ofRowLens [4, 1, 1] st411))
     (hT : T.content = ({2, 2, 2} : Multiset ℕ).fromCounts) :
@@ -293,15 +274,15 @@ lemma g411u222 (T : SemistandardYoungTableau (ofRowLens [4, 1, 1] st411))
     have h20 : (2, 0) ∈ ofRowLens [4, 1, 1] st411 := by
       simp [mem_ofRowLens]
     refine antisymm (entry_ge_col h20) ?_
-    have hc : T 2 0 ∈ T.content := mem_content_of_mem_cells h20
-    simp [hT, Multiset.mem_fromCounts_iff] at hc
-    exact Nat.le_of_lt_succ hc
+    have hc : T 2 0 ∈ T.content := mem_content_of_mem h20
+    refine Nat.le_of_lt_succ ?_
+    simpa [hT, Multiset.mem_fromCounts_iff] using hc
   fun_cases Tg411u222
   · contradiction
   · contradiction
   · contradiction
   · contradiction
-  · suffices 0 < T 1 0 ∧ T 1 0 < 2 by omega
+  · suffices 0 < T 1 0 ∧ T 1 0 < 2 by lia
     constructor
     · nth_rw 1 [← h0]
       refine T.col_strict (zero_lt_one) ?_
@@ -316,15 +297,14 @@ lemma g411u222 (T : SemistandardYoungTableau (ofRowLens [4, 1, 1] st411))
     intro hi'
     rw [← Nat.pos_iff_ne_zero] at hi
     interval_cases i
-    all_goals simp_all; omega
+    all_goals simp_all; lia
 
 lemma kostka_g411u222 : kostkaNumber (ofRowLens [4, 1, 1] st411)
     ({2, 2, 2} : Multiset ℕ) = 1 := by
   have hk : kostkaNumber (ofRowLens [4, 1, 1] st411) ({2, 2, 2} : Multiset ℕ) ≥ 1 := by
-    suffices kostkaNumber (ofRowLens [4, 1, 1] st411) ({2, 2, 2} : Multiset ℕ) > 0 by exact this
-    rw [gt_iff_lt, kostka_pos_iff_dominates, rowLens_ofRowLens_eq_self]
-    · rw [← Multiset.coe_toList ({2, 2, 2} : Multiset ℕ), Multiset.coe_sort,
-        sort_triple_ge (by rfl) (by rfl), triple_dominates_triple]
+    refine Nat.le_of_pred_lt ?_
+    rw [Nat.pred_eq_sub_one, tsub_self, kostka_pos_iff_dominates, rowLens_ofRowLens_eq_self]
+    · rw [sort_triple_ge (by rfl) (by rfl), triple_dominates_triple]
       simp
     all_goals simp
   refine antisymm hk ?_
@@ -347,33 +327,30 @@ def Tg33u222 : ℕ → ℕ → ℕ
   | 1, 2 => 2
   | _, _ => 0
 
-lemma st33 : List.Sorted (· ≥ ·) [3, 3] := by
-  exact sorted_pair (by rfl)
+lemma st33 : List.SortedGE [3, 3] := sorted_pair (by rfl)
 
 lemma g33u222 (T : SemistandardYoungTableau (ofRowLens [3, 3] st33))
     (hT : T.content = ({2, 2, 2} : Multiset ℕ).fromCounts) :
     ∀ i ≠ 1, ∀ j, T i j = Tg33u222 i j := by
   intro i hi j
-  have hμ : ({2, 2, 2} : Multiset ℕ) ≠ 0 := by simp
-  have hmax : max_el ({2, 2, 2} : Multiset ℕ) hμ = 2 := max_el_triple (by rfl) (by rfl)
+  have hμ : ({2, 2, 2} : Multiset ℕ).toList ≠ [] := by simp
+  have hmax : ({2, 2, 2} : Multiset ℕ).toList.max hμ = 2 := max_triple (by rfl) (by rfl)
   fun_cases Tg33u222
-  · rw [zero_iff_of_mem T hμ hT ?_, hmax]
+  · rw [entry_eq_zero_iff_of_mem T hμ hT ?_, hmax]
     · simp
     · simp [mem_ofRowLens]
-  · rw [zero_iff_of_mem T hμ hT ?_, hmax]
+  · rw [entry_eq_zero_iff_of_mem T hμ hT ?_, hmax]
     · simp
     · simp [mem_ofRowLens]
   · have hT0 : T 0 2 ≥ 1 := by
       suffices T 0 2 > 0 by exact this
-      rw [gt_iff_lt, Nat.pos_iff_ne_zero, ne_eq, zero_iff_of_mem T hμ hT ?_, hmax]
+      rw [gt_iff_lt, Nat.pos_iff_ne_zero, ne_eq, entry_eq_zero_iff_of_mem T hμ hT ?_, hmax]
       · simp
       · simp [mem_ofRowLens]
     refine antisymm hT0 ?_
     contrapose! hT
     suffices 3 ≤ T 1 2 by
-      have hT12 : T 1 2 ∈ T.content := by
-        refine mem_content_of_mem_cells ?_
-        simp [mem_ofRowLens]
+      have hT12 : T 1 2 ∈ T.content := mem_content_of_mem (by simp [mem_ofRowLens])
       contrapose! hT12
       simp [hT12, Multiset.mem_fromCounts_iff, this]
     suffices 2 < T 1 2 by exact this
@@ -384,19 +361,19 @@ lemma g33u222 (T : SemistandardYoungTableau (ofRowLens [3, 3] st33))
   · contradiction
   · contradiction
   · refine T.zeros ?_
-    simp [mem_ofRowLens]
+    simp only [mem_ofRowLens, List.length_cons, List.length_nil, zero_add, Nat.reduceAdd,
+      Order.lt_two_iff, not_exists, not_lt]
     intro hi2
     interval_cases i
     all_goals simp_all
-    · omega
+    · lia
 
 lemma kostka_g33u222 : kostkaNumber (ofRowLens [3, 3] st33)
     ({2, 2, 2} : Multiset ℕ) = 1 := by
   have hk : kostkaNumber (ofRowLens [3, 3] st33) ({2, 2, 2} : Multiset ℕ) ≥ 1 := by
-    suffices kostkaNumber (ofRowLens [3, 3] st33) ({2, 2, 2} : Multiset ℕ) > 0 by exact this
-    rw [gt_iff_lt, kostka_pos_iff_dominates, rowLens_ofRowLens_eq_self]
-    · rw [← Multiset.coe_toList ({2, 2, 2} : Multiset ℕ), Multiset.coe_sort,
-        sort_triple_ge (by rfl) (by rfl), pair_dominates_triple]
+    refine Nat.le_of_pred_lt ?_
+    rw [Nat.pred_eq_sub_one, tsub_self, kostka_pos_iff_dominates, rowLens_ofRowLens_eq_self]
+    · rw [sort_triple_ge (by rfl) (by rfl), pair_dominates_triple]
       simp
     all_goals simp
   refine antisymm hk ?_
@@ -411,23 +388,23 @@ lemma kostka_g33u222 : kostkaNumber (ofRowLens [3, 3] st33)
 
 
 
-lemma st321 : List.Sorted (· ≥ ·) [3, 2, 1] := by
-  exact sorted_triple (by norm_num) (by norm_num)
+lemma st321 : List.SortedGE [3, 2, 1] := sorted_triple (by norm_num) (by norm_num)
 
 lemma entry20_of_321 (T : SemistandardYoungTableau (ofRowLens [3, 2, 1] st321))
     (hT : T.content = ({2, 2, 2} : Multiset ℕ).fromCounts) : T 2 0 = 2 := by
   have h20 : (2, 0) ∈ (ofRowLens [3, 2, 1] st321) := by simp [mem_ofRowLens]
   refine antisymm (entry_ge_col h20) ?_
-  have hT20 : T 2 0 ∈ T.content := mem_content_of_mem_cells h20
+  have hT20 : T 2 0 ∈ T.content := mem_content_of_mem h20
   simp [hT, Multiset.mem_fromCounts_iff] at hT20
-  omega
+  lia
 
 lemma g321u222 (T T' : SemistandardYoungTableau (ofRowLens [3, 2, 1] st321))
     (hT : T.content = ({2, 2, 2} : Multiset ℕ).fromCounts)
     (hT' : T'.content = ({2, 2, 2} : Multiset ℕ).fromCounts) :
     T = T' ↔ T 0 2 = T' 0 2 := by
   constructor
-  · intro h; rw [h]
+  · intro h
+    rw [h]
   · intro h
     refine eq_of_missing_row T T' ?_ 1 ?_
     · rw [hT, hT']
@@ -436,46 +413,37 @@ lemma g321u222 (T T' : SemistandardYoungTableau (ofRowLens [3, 2, 1] st321))
       · simp only [mem_ofRowLens, List.length_cons, List.length_nil, zero_add,
           Nat.reduceAdd] at hij
         obtain ⟨hi3, hij⟩ := hij
-
         have h01 : (0, 1) ∈ (ofRowLens [3, 2, 1] st321) := by simp [mem_ofRowLens]
-        have hμ : ({2, 2, 2} : Multiset ℕ) ≠ 0 := by simp
-        have hmax : max_el ({2, 2, 2} : Multiset ℕ) hμ = 2 := by
-          exact max_el_triple (by rfl) (by rfl)
+        have hμ : ({2, 2, 2} : Multiset ℕ).toList ≠ [] := by simp
+        have hmax : ({2, 2, 2} : Multiset ℕ).toList.max hμ = 2 := max_triple (by rfl) (by rfl)
         have hγ : (ofRowLens [3, 2, 1] st321) ≠ ⊥ := by
           contrapose! h01
-          rw [h01]
-          exact notMem_bot (0, 1)
-
+          exact h01 ▸ notMem_bot (0, 1)
         interval_cases i
         · simp only [List.getElem_cons_zero] at hij
           interval_cases j
           · rw [top_left_of_content_fromCounts hγ hT,
               top_left_of_content_fromCounts hγ hT']
-          · rw [(zero_iff_of_mem T hμ hT h01).mpr,
-              (zero_iff_of_mem T' hμ hT' h01).mpr]
+          · rw [(entry_eq_zero_iff_of_mem T hμ hT h01).mpr,
+              (entry_eq_zero_iff_of_mem T' hμ hT' h01).mpr]
             all_goals rw [hmax]; simp
           · exact h
         · contradiction
         · simp only [List.getElem_cons_succ, List.getElem_cons_zero, Nat.lt_one_iff] at hij
           rw [hij, entry20_of_321 _ hT, entry20_of_321 _ hT']
-
       · rw [T.zeros hij, T'.zeros hij]
 
 lemma g321u222_02_eq_one_or_two (T : SemistandardYoungTableau (ofRowLens [3, 2, 1] st321))
     (hT : T.content = ({2, 2, 2} : Multiset ℕ).fromCounts) :
     T 0 2 = 1 ∨ T 0 2 = 2 := by
-  suffices 0 < T 0 2 ∧ T 0 2 < 3 by omega
-  have hμ : ({2, 2, 2} : Multiset ℕ) ≠ 0 := by simp
-  have hmax : max_el ({2, 2, 2} : Multiset ℕ) hμ = 2 := by
-    exact max_el_triple (by rfl) (by rfl)
+  suffices 0 < T 0 2 ∧ T 0 2 < 3 by lia
+  have hμ : ({2, 2, 2} : Multiset ℕ).toList ≠ [] := by simp
+  have hmax : ({2, 2, 2} : Multiset ℕ).toList.max hμ = 2 := max_triple (by rfl) (by rfl)
   constructor
-  · rw [Nat.pos_iff_ne_zero, ne_eq, zero_iff_of_mem T hμ hT, hmax]
+  · rw [Nat.pos_iff_ne_zero, ne_eq, entry_eq_zero_iff_of_mem T hμ hT, hmax]
     all_goals simp [mem_ofRowLens]
-  · have hT02 : T 0 2 ∈ T.content := by
-      refine mem_content_of_mem_cells ?_
-      simp [mem_ofRowLens]
-    simp [hT, Multiset.mem_fromCounts_iff] at hT02
-    exact hT02
+  · have hT02 : T 0 2 ∈ T.content := mem_content_of_mem (by simp [mem_ofRowLens])
+    simpa [hT, Multiset.mem_fromCounts_iff] using hT02
 
 lemma kostka_g321u222_le : kostkaNumber (ofRowLens [3, 2, 1] st321)
     ({2, 2, 2} : Multiset ℕ) ≤ 2 := by
@@ -490,4 +458,4 @@ lemma kostka_g321u222_le : kostkaNumber (ofRowLens [3, 2, 1] st321)
   let h02 := g321u222_02_eq_one_or_two T hT
   let h02' := g321u222_02_eq_one_or_two T' hT'
   let h02'' := g321u222_02_eq_one_or_two T'' hT''
-  omega
+  lia

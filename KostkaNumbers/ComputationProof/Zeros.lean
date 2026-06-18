@@ -1,3 +1,9 @@
+/-
+Copyright (c) 2026 Noah Walker. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Noah Walker
+-/
+
 import Mathlib
 import KostkaNumbers.Content
 
@@ -19,117 +25,104 @@ lemma zero_of_left_zero (T : SemistandardYoungTableau γ) {i j1 j2 : ℕ} (hj : 
   exact T.row_weak_of_le hj hij
 
 
-def content_zero_equiv (i j : ℕ) : {x : ℕ × ℕ | x.1 = i ∧ x.2 ≤ j} → Fin (j+1) :=
-  fun ⟨x, hx⟩ ↦
-  ⟨x.2, by
+def contentZeroEquiv (i j : ℕ) : {x : ℕ × ℕ | x.1 = i ∧ x.2 ≤ j} → Fin (j + 1) :=
+  fun ⟨x, hx⟩ ↦ ⟨x.2, by
     rw [Set.mem_setOf] at hx
     exact Order.lt_add_one_iff.mpr hx.2⟩
-lemma content_equiv_bijective (i j : ℕ) : Function.Bijective <| content_zero_equiv i j := by
+
+lemma contentZeroEquiv_bijective (i j : ℕ) : Function.Bijective <| contentZeroEquiv i j := by
   constructor
   · intro ⟨x, hx⟩ ⟨y, hy⟩ hxy
     rw [Set.mem_setOf] at hx hy
     rw [Subtype.mk.injEq]
-    simp only [Fin.mk.injEq, content_zero_equiv] at hxy
+    simp only [Fin.mk.injEq, contentZeroEquiv] at hxy
     ext
     · rw [hx.1, hy.1]
     · exact hxy
   · intro k
-    use ⟨(i, k), by simp; omega⟩
-    simp [content_zero_equiv]
+    use ⟨(i, k), by grind⟩
+    simp [contentZeroEquiv]
 
 noncomputable
 instance fintypeRowLe (i j : ℕ) : Fintype {x : ℕ × ℕ | x.1 = i ∧ x.2 ≤ j} :=
-  Fintype.ofInjective (content_zero_equiv i j) (content_equiv_bijective i j).1
+  Fintype.ofInjective (contentZeroEquiv i j) (contentZeroEquiv_bijective i j).1
 
-lemma content_zero_card (i j : ℕ) : {x : ℕ × ℕ | x.1 = i ∧ x.2 ≤ j}.toFinset.card = j + 1 := by
-  rw [Set.toFinset_card, Fintype.card_of_bijective (content_equiv_bijective i j),
+lemma contentZero_card (i j : ℕ) : {x : ℕ × ℕ | x.1 = i ∧ x.2 ≤ j}.toFinset.card = j + 1 := by
+  rw [Set.toFinset_card, Fintype.card_of_bijective (contentZeroEquiv_bijective i j),
     Fintype.card_fin]
 
 
-theorem entry_zero_of_lt_max_el (T : SemistandardYoungTableau γ) {μ : Multiset ℕ} (hμ : μ ≠ 0)
-    (hc : T.content = μ.fromCounts) {j : ℕ} (hij : (0, j) ∈ γ)
-    (hj : j < max_el μ hμ) : T 0 j = 0 := by
+theorem entry_zero_of_lt_max_el (T : SemistandardYoungTableau γ) {μ : Multiset ℕ}
+    (hμ : μ.toList ≠ []) (hc : T.content = μ.fromCounts) {j : ℕ} (hij : (0, j) ∈ γ)
+    (hj : j < μ.toList.max hμ) : T 0 j = 0 := by
   by_cases hj0 : j = 0
   · rw [hj0]
     refine top_left_of_content_fromCounts ?_ hc
     contrapose! hij
     rw [hij]
     exact notMem_bot (0, j)
-
   rw [← Nat.le_zero]
   apply_fun Multiset.count 0 at hc
   contrapose! hc
   refine ne_of_lt ?_
   rw [content, Multiset.count_map, Multiset.count_fromCounts ?_,
-    ← max_el_eq_get_zero_of_ge_sort μ hμ]
-  swap
-  · rw [Nat.pos_iff_ne_zero, ne_eq, Multiset.card_eq_zero]
-    exact hμ
-  simp only
-  suffices (Multiset.filter (fun x ↦ 0 = T x.1 x.2) γ.cells.val).toFinset ⊆
-      {x : ℕ × ℕ | x.1 = 0 ∧ x.2 ≤ j - 1}.toFinset by
-    apply Finset.card_le_card at this
-    rw [← Multiset.toFinset_card_eq_card_iff_nodup.mpr]
-    refine lt_of_le_of_lt this ?_
-    rw [content_zero_card, Nat.sub_one_add_one hj0]
-    exact hj
+    Multiset.sort_getElem_zero_eq_max hμ]
+  · simp only
+    suffices (Multiset.filter (fun x ↦ 0 = T x.1 x.2) γ.cells.val).toFinset ⊆
+        {x : ℕ × ℕ | x.1 = 0 ∧ x.2 ≤ j - 1}.toFinset by
+      apply Finset.card_le_card at this
+      rw [← Multiset.toFinset_card_eq_card_iff_nodup.mpr]
+      · refine lt_of_le_of_lt this ?_
+        rwa [contentZero_card, Nat.sub_one_add_one hj0]
+      · exact Multiset.Nodup.filter _ γ.cells.nodup
+    simp only [Multiset.toFinset_filter, Finset.val_toFinset, Set.subset_toFinset,
+      Finset.coe_filter, mem_cells, Set.setOf_subset_setOf, and_imp, Prod.forall]
+    intro a b hab habT
+    have ha : a = 0 := by
+      rw [← Nat.le_zero, habT]
+      exact entry_ge_col hab
+    constructor
+    · exact ha
+    · contrapose! hc
+      nth_rw 2 [habT]
+      rw [ha] at hab ⊢
+      exact T.row_weak_of_le (Nat.le_of_pred_lt hc) hab
+  · simp [Nat.pos_iff_ne_zero, Multiset.card_eq_zero, ← Multiset.toList_eq_nil, hμ]
 
-    exact Multiset.Nodup.filter _ γ.cells.nodup
-
-  simp only [Multiset.toFinset_filter, Finset.val_toFinset, Set.subset_toFinset, Finset.coe_filter,
-    mem_cells, Set.setOf_subset_setOf, and_imp, Prod.forall]
-  intro a b hab habT
-  have ha : a = 0 := by
-    rw [← Nat.le_zero, habT]
-    exact entry_ge_col hab
-  constructor
-  · exact ha
-  · contrapose! hc
-    nth_rw 2 [habT]
-    rw [ha]; rw [ha] at hab
-    have hjb : j ≤ b := Nat.le_of_pred_lt hc
-    exact T.row_weak_of_le hjb hab
-
-theorem lt_max_el_of_entry_zero (T : SemistandardYoungTableau γ) {μ : Multiset ℕ} (hμ : μ ≠ 0)
-    (hc : T.content = μ.fromCounts) {i j : ℕ} (hij : (i, j) ∈ γ)
-    (h : T i j = 0) : i = 0 ∧ j < max_el μ hμ := by
+theorem lt_max_el_of_entry_zero (T : SemistandardYoungTableau γ) {μ : Multiset ℕ}
+    (hμ : μ.toList ≠ []) (hc : T.content = μ.fromCounts) {i j : ℕ} (hij : (i, j) ∈ γ)
+    (h : T i j = 0) : i = 0 ∧ j < μ.toList.max hμ := by
   constructor
   · rw [← Nat.le_zero, ← h]
     exact entry_ge_col hij
   · contrapose! hc
-    suffices Multiset.count 0 T.content ≠ Multiset.count 0 μ.fromCounts by
-      contrapose! this
-      rw [this]
-    rw [Multiset.count_fromCounts ?_, ← max_el_eq_get_zero_of_ge_sort μ hμ]
+    apply_fun Multiset.count 0
+    rw [Multiset.count_fromCounts ?_, Multiset.sort_getElem_zero_eq_max hμ]
     · refine ne_of_gt ?_
-      simp [content, Multiset.count_map]
+      simp only [content, Multiset.count_map]
       suffices {x : ℕ × ℕ | x.1 = i ∧ x.2 ≤ j}.toFinset ⊆
           (Multiset.filter (fun x ↦ 0 = T x.1 x.2) γ.cells.val).toFinset by
-        rw [← Multiset.toFinset_card_eq_card_iff_nodup.mpr]
+        rw [← Multiset.toFinset_card_eq_card_iff_nodup.mpr (Multiset.Nodup.filter _ γ.cells.nodup)]
         apply Finset.card_le_card at this
         refine lt_of_lt_of_le ?_ this
-        rw [content_zero_card]
+        rw [contentZero_card]
         exact Order.lt_add_one_iff.mpr hc
-
-        exact Multiset.Nodup.filter _ γ.cells.nodup
       intro x
       simp only [Set.mem_toFinset, Set.mem_setOf_eq, Multiset.toFinset_filter,
         Finset.val_toFinset, Finset.mem_filter, mem_cells, and_imp]
       intro hx1 hx2
       constructor
       · exact γ.up_left_mem (Nat.le_of_eq hx1) hx2 hij
-      · symm
-        rw [hx1]
-        exact zero_of_left_zero T hx2 hij h
-    · rw [Nat.pos_iff_ne_zero, ne_eq, Multiset.card_eq_zero]
-      exact hμ
+      · rw [hx1]
+        exact (zero_of_left_zero T hx2 hij h).symm
+    · rwa [Nat.pos_iff_ne_zero, ne_eq, Multiset.card_eq_zero, ← Multiset.toList_eq_nil]
 
-theorem zero_iff_of_mem (T : SemistandardYoungTableau γ) {μ : Multiset ℕ} (hμ : μ ≠ 0)
+theorem entry_eq_zero_iff_of_mem (T : SemistandardYoungTableau γ) {μ : Multiset ℕ}
+    (hμ : μ.toList ≠ [])
     (hc : T.content = μ.fromCounts) {i j : ℕ} (hij : (i, j) ∈ γ) :
-    T i j = 0 ↔ i = 0 ∧ j < max_el μ hμ := by
+    T i j = 0 ↔ i = 0 ∧ j < μ.toList.max hμ := by
   constructor
   · exact lt_max_el_of_entry_zero T hμ hc hij
   · intro ⟨hi, hj⟩
-    rw [hi] at hij
-    rw [hi]
+    rw [hi] at hij ⊢
     exact entry_zero_of_lt_max_el T hμ hc hij hj

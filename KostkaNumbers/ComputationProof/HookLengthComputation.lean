@@ -1,6 +1,13 @@
+/-
+Copyright (c) 2026 Noah Walker. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Noah Walker
+-/
+
 import Mathlib
 import KostkaNumbers.Basic
-import KostkaNumbers.HookLength.HookLengthFormula
+import KostkaNumbers.ProbHookLength.HookLengthFormula
+import KostkaNumbers.ComputationProof.Computation
 
 
 open YoungDiagram SemistandardYoungTableau Kostka
@@ -10,184 +17,102 @@ open YoungDiagram SemistandardYoungTableau Kostka
 Partitions of 4
 -/
 
-lemma kostka_22 : kostkaNumber (ofRowLens [2, 2] (by simp))
-    (Multiset.replicate 4 1) = 2 := by
+lemma kostka_22 : kostkaNumber (ofRowLens [2, 2] (sorted_pair (by rfl))) (Multiset.replicate 4 1) =
+    2 := by
   rw [hookLength_formula _ (by simp)]
   norm_num
-  suffices (ofRowLens [2, 2] (by simp)).cells = {(0,0), (0,1), (1,0), (1,1)} by simp [this]
-  ext x
-  simp [mem_ofRowLens]
-  constructor
-  · intro ⟨h, hx⟩
-    interval_cases hx1 : x.1
-    all_goals simp at hx; interval_cases hx2 : x.2
-    all_goals rw [← Prod.eta x]; simp [hx1, hx2]
-  · intro h
-    rcases h with h|h|h|h
-    all_goals simp [h]
-
-lemma kostka_211 : kostkaNumber (ofRowLens [2, 1, 1] (by simp))
-    (Multiset.replicate 4 1) = 3 := by
-  rw [hookLength_formula _ (by simp)]
-  norm_num
-  suffices (ofRowLens [2, 1, 1] (by simp)).cells =
-      {(0,0), (0,1), (1,0), (2,0)} by
+  suffices (ofRowLens [2, 2] (sorted_pair (by rfl))).cells = {(0,0), (0,1), (1,0), (1,1)} by
     simp [this]
   ext x
   simp [mem_ofRowLens]
-  constructor
-  · intro ⟨h, hx⟩
-    interval_cases hx1 : x.1
-    all_goals simp at hx;
-    · interval_cases hx2 : x.2
-      all_goals rw [← Prod.eta x]; simp [hx1, hx2]
-    all_goals rw [← Prod.eta x]; simp [hx1, hx]
-  · intro h
-    rcases h with h|h|h|h
-    all_goals simp [h]
+  grind
+
+lemma kostka_211 : kostkaNumber (ofRowLens [2, 1, 1] (sorted_triple (by norm_num) (by rfl)))
+    (Multiset.replicate 4 1) = 3 := by
+  rw [hookLength_formula _ (by simp)]
+  norm_num
+  suffices (ofRowLens [2, 1, 1] (sorted_triple (by norm_num) (by rfl))).cells =
+      {(0,0), (0,1), (1,0), (2,0)} by simp [this]
+  ext x
+  simp [mem_ofRowLens]
+  grind
 
 
 /-
 Partitiosn of 5
 -/
 
-lemma kostka_32 : kostkaNumber (ofRowLens [3, 2] (by simp))
+lemma kostka_32 : kostkaNumber (ofRowLens [3, 2] (sorted_pair (by norm_num)))
     (Multiset.replicate 5 1) = 5 := by
   rw [hookLength_formula _ (by simp)]
   norm_num
-  suffices (ofRowLens [3, 2] (by simp)).cells =
-      {(0,0), (0,1), (0,2), (1,0), (1,1)} by
-    simp [this]
+  suffices (ofRowLens [3, 2] (sorted_pair (by norm_num))).cells =
+      {(0,0), (0,1), (0,2), (1,0), (1,1)} by simp [this]
   ext x
   simp [mem_ofRowLens]
-  constructor
-  · intro ⟨h, hx⟩
-    interval_cases hx1 : x.1
-    all_goals simp at hx; interval_cases hx2 : x.2
-    all_goals rw [← Prod.eta x]; simp [hx1, hx2]
-  · intro h
-    rcases h with h|h|h|h|h
-    all_goals simp [h]
+  grind
 
-lemma kostka_311 : kostkaNumber (ofRowLens [3, 1, 1] (by simp))
+lemma kostka_311 : kostkaNumber (ofRowLens [3, 1, 1] (sorted_triple (by norm_num) (by rfl)))
     (Multiset.replicate 5 1) = 6 := by
   rw [hookLength_formula _ (by simp)]
   norm_num
-  suffices (ofRowLens [3, 1, 1] (by simp)).cells =
-      {(0,0), (0,1), (0,2), (1,0), (2,0)} by
-    simp [this]
+  suffices (ofRowLens [3, 1, 1] (sorted_triple (by norm_num) (by rfl))).cells =
+      {(0,0), (0,1), (0,2), (1,0), (2,0)} by simp [this]
   ext x
   simp [mem_ofRowLens]
-  constructor
-  · intro ⟨h, hx⟩
-    interval_cases hx1 : x.1
-    all_goals simp at hx;
-    · interval_cases hx2 : x.2
-      all_goals rw [← Prod.eta x]; simp [hx1, hx2]
-    all_goals rw [← Prod.eta x]; simp [hx1, hx]
-  · intro h
-    rcases h with h|h|h|h|h
-    all_goals simp [h]
+  grind
 
-lemma kostka_221 : kostkaNumber (ofRowLens [2, 2, 1] (by simp))
+lemma kostka_221 : kostkaNumber (ofRowLens [2, 2, 1] (sorted_triple (by rfl) (by norm_num)))
     (Multiset.replicate 5 1) = 5 := by
   rw [hookLength_formula _ (by simp)]
   norm_num
-  suffices (ofRowLens [2, 2, 1] (by simp)).cells =
-      {(0,0), (0,1), (1,0), (1,1), (2,0)} by
-    simp [this]
+  suffices (ofRowLens [2, 2, 1] (sorted_triple (by rfl) (by norm_num))).cells =
+      {(0,0), (0,1), (1,0), (1,1), (2,0)} by simp [this]
   ext x
   simp [mem_ofRowLens]
-  constructor
-  · intro ⟨h, hx⟩
-    interval_cases hx1 : x.1
-    all_goals simp at hx
-    rotate_right 1
-    · rw [← Prod.eta x]; simp [hx1, hx]
-    all_goals interval_cases hx2 : x.2
-    all_goals rw [← Prod.eta x]; simp [hx1, hx2]
-  · intro h
-    rcases h with h|h|h|h|h
-    all_goals simp [h]
+  grind
 
 
 /-
 Partitions of 6
 -/
 
-lemma kostka_411 : kostkaNumber (ofRowLens [4, 1, 1] (by simp))
+lemma kostka_411 : kostkaNumber (ofRowLens [4, 1, 1] (sorted_triple (by norm_num) (by rfl)))
     (Multiset.replicate 6 1) = 10 := by
   rw [hookLength_formula _ (by simp)]
   norm_num
-  suffices (ofRowLens [4, 1, 1] (by simp)).cells =
-      {(0,0), (0,1), (0,2), (0,3), (1,0), (2,0)} by
-    simp [this]
+  suffices (ofRowLens [4, 1, 1] (sorted_triple (by norm_num) (by rfl))).cells =
+      {(0,0), (0,1), (0,2), (0,3), (1,0), (2,0)} by simp [this]
   ext x
   simp [mem_ofRowLens]
-  constructor
-  · intro ⟨h, hx⟩
-    interval_cases hx1 : x.1
-    all_goals simp at hx;
-    · interval_cases hx2 : x.2
-      all_goals rw [← Prod.eta x]; simp [hx1, hx2]
-    all_goals rw [← Prod.eta x]; simp [hx1, hx]
-  · intro h
-    rcases h with h|h|h|h|h|h
-    all_goals simp [h]
+  grind
 
-lemma kostka_33 : kostkaNumber (ofRowLens [3, 3] (by simp))
+lemma kostka_33 : kostkaNumber (ofRowLens [3, 3] (sorted_pair (by rfl)))
     (Multiset.replicate 6 1) = 5 := by
   rw [hookLength_formula _ (by simp)]
   norm_num
-  suffices (ofRowLens [3, 3] (by simp)).cells =
-      {(0,0), (0,1), (0,2), (1,0), (1,1), (1,2)} by
-    simp [this]
+  suffices (ofRowLens [3, 3] (sorted_pair (by rfl))).cells =
+      {(0,0), (0,1), (0,2), (1,0), (1,1), (1,2)} by simp [this]
   ext x
   simp [mem_ofRowLens]
-  constructor
-  · intro ⟨h, hx⟩
-    interval_cases hx1 : x.1
-    all_goals simp at hx; interval_cases hx2 : x.2
-    all_goals rw [← Prod.eta x]; simp [hx1, hx2]
-  · intro h
-    rcases h with h|h|h|h|h|h
-    all_goals simp [h]
+  grind
 
-lemma kostka_321 : kostkaNumber (ofRowLens [3, 2, 1] (by simp))
+lemma kostka_321 : kostkaNumber (ofRowLens [3, 2, 1] (sorted_triple (by norm_num) (by norm_num)))
     (Multiset.replicate 6 1) = 16 := by
   rw [hookLength_formula _ (by simp)]
   norm_num
-  suffices (ofRowLens [3, 2, 1] (by simp)).cells =
-      {(0,0), (0,1), (0,2), (1,0), (1,1), (2,0)} by
-    simp [this]
+  suffices (ofRowLens [3, 2, 1] (sorted_triple (by norm_num) (by norm_num))).cells =
+      {(0,0), (0,1), (0,2), (1,0), (1,1), (2,0)} by simp [this]
   ext x
   simp [mem_ofRowLens]
-  constructor
-  · intro ⟨h, hx⟩
-    interval_cases hx1 : x.1
-    all_goals simp at hx
-    rotate_right 1
-    · rw [← Prod.eta x]; simp [hx1, hx]
-    all_goals interval_cases hx2 : x.2
-    all_goals rw [← Prod.eta x]; simp [hx1, hx2]
-  · intro h
-    rcases h with h|h|h|h|h|h
-    all_goals simp [h]
+  grind
 
-lemma kostka_222 : kostkaNumber (ofRowLens [2, 2, 2] (by simp))
+lemma kostka_222 : kostkaNumber (ofRowLens [2, 2, 2] (sorted_triple (by rfl) (by rfl)))
     (Multiset.replicate 6 1) = 5 := by
   rw [hookLength_formula _ (by simp)]
   norm_num
-  suffices (ofRowLens [2, 2, 2] (by simp)).cells =
-      {(0,0), (0,1), (1,0), (1,1), (2,0), (2,1)} by
-    simp [this]
+  suffices (ofRowLens [2, 2, 2] (sorted_triple (by rfl) (by rfl))).cells =
+      {(0,0), (0,1), (1,0), (1,1), (2,0), (2,1)} by simp [this]
   ext x
   simp [mem_ofRowLens]
-  constructor
-  · intro ⟨h, hx⟩
-    interval_cases hx1 : x.1
-    all_goals simp at hx; interval_cases hx2 : x.2
-    all_goals rw [← Prod.eta x]; simp [hx1, hx2]
-  · intro h
-    rcases h with h|h|h|h|h|h
-    all_goals simp [h]
+  grind

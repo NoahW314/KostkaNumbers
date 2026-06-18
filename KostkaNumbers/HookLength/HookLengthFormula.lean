@@ -36,14 +36,15 @@ instance fintype_subdiagrams {γ : YoungDiagram} : Fintype (Subdiagram γ) := by
 
 
 
-lemma sub_cond_of_remove_corner (γ : YoungDiagram) (x : ℕ × ℕ) (hx : IsCornerCell γ x) :
+lemma sub_cond_of_remove_corner (γ : YoungDiagram) (x : ℕ × ℕ) (hx : x ∈ γ.corners) :
     ∀ i, γ.rowLens' i - (Finsupp.single x.1 1) i ≥
     γ.rowLens' (i + 1) := by
   intro i
   simp only [Finsupp.single_apply, ge_iff_le]
   have hrli : γ.rowLens' (i + 1) ≤ γ.rowLens' i := by exact γ.rowLens'_anti (by omega)
   split_ifs with hi
-  · unfold IsCornerCell at hx
+  · simp only [corners, Finset.mem_filter, mem_cells] at hx
+    apply And.right at hx
     subst hi
     rw [γ.rowLens'_eq_rowLen, γ.rowLens'_eq_rowLen, ← hx.1]
     simp only [add_tsub_cancel_right, ge_iff_le]
@@ -52,6 +53,56 @@ lemma sub_cond_of_remove_corner (γ : YoungDiagram) (x : ℕ × ℕ) (hx : IsCor
     omega
   · omega
 
+-- noncomputable
+-- def pi1 (γ : YoungDiagram) (n : ℕ) (h : γ.card = n) (h0 : n > 0) :
+--     PermWord n → γ × PermWord (n - 1) :=
+--   fun σ ↦
+--     (⟨(γ.nth_cell (σ.1[0]'(by rw [σ.2.2]; exact h0))
+--     (by rw [h]; exact permWord_getElem_lt σ 0 h0)),
+--     nth_cell_mem (by rw [h]; exact permWord_getElem_lt σ 0 (by omega))⟩,
+
+--     ⟨reduceList σ.1.tail, by
+--     have hst : σ.1.tail.Nodup := List.Sublist.nodup (List.tail_sublist _) (permWord_nodup σ)
+--     simp [PermWord, reduceList_length, σ.2.2, reduceList_multiset _ hst]⟩)
+
+-- def pi2 (γ : YoungDiagram) :
+--     γ × ((μ : Subdiagram γ) → {P : PointerTableau μ | IsStrict P}) → γ.corners :=
+--   fun (x, P) ↦ ⟨followPath (P ⟨γ, subdiagram_self γ⟩) x.1 x.2,
+--     followPath_mem_corners (P ⟨γ, subdiagram_self γ⟩).2 x.1 x.2⟩
+
+-- def pi3 (γ : YoungDiagram) (n : ℕ) (h : γ.card = n) (h0 : n > 0) :
+--     PermWord n × ((μ : Subdiagram γ) → {P : PointerTableau μ | IsStrict P}) →
+--     SemistandardYoungTableauWithContent γ (Multiset.replicate n 1) ×
+--     (PointerTableau γ) × ((μ : Subdiagram γ) → {P : PointerTableau μ | IsStrict P}) :=
+--     sorry
+
+-- noncomputable
+-- def pi6 (γ : YoungDiagram) (n : ℕ) (x : ℕ × ℕ) (hx : x ∈ γ.corners) :
+--     SemistandardYoungTableauWithContent (γ.sub (Finsupp.single x.1 1))
+--     (Multiset.replicate (n - 1) 1) →
+--     SemistandardYoungTableauWithContent γ (Multiset.replicate n 1) :=
+--   fun T' ↦ ⟨extend T'.1
+--     (sub_valid γ (Finsupp.single x.1 1) (sub_cond_of_remove_corner γ x hx)) (n - 1)
+--     (by
+
+--     sorry)
+--     ,
+--     by
+
+--     sorry⟩
+
+-- def pi' (γ : YoungDiagram) (n : ℕ) (h : γ.card = n) :
+--   PermWord n × ((μ : Subdiagram γ) → {P : PointerTableau μ | IsStrict P}) →
+--   SemistandardYoungTableauWithContent γ (Multiset.replicate n 1) ×
+--   (PointerTableau γ) × ((μ : Subdiagram γ) → {P : PointerTableau μ | IsStrict P}) :=
+--   fun (σ, P) ↦ if h0 : n ≤ 0 then sorry else by
+--     push_neg at h0
+--     let ⟨x, σ'⟩ := pi1 γ n h h0 σ
+--     let ⟨x', hx'⟩ := pi2 γ (x, P)
+--     let ⟨T', P', Q'⟩ := pi' (γ.sub (Finsupp.single x'.1 1)) sorry
+--     sorry
+
+noncomputable
 def pi (γ : YoungDiagram) (n : ℕ) (h : γ.card = n) :
   PermWord n × ((μ : Subdiagram γ) → {P : PointerTableau μ | IsStrict P}) →
   SemistandardYoungTableauWithContent γ (Multiset.replicate n 1) ×
@@ -76,7 +127,7 @@ def pi (γ : YoungDiagram) (n : ℕ) (h : γ.card = n) :
     have hst : σ.1.tail.Nodup := List.Sublist.nodup (List.tail_sublist _) (permWord_nodup σ)
     simp [PermWord, reduceList_length, σ.2.2, reduceList_multiset _ hst]⟩
   let x' : ℕ × ℕ := followPath (P ⟨γ, subdiagram_self γ⟩) x (nth_cell_mem hsc)
-  have hccx' : IsCornerCell γ x' := followPath_isCornerCell
+  have hccx' : x' ∈ γ.corners := followPath_mem_corners
     (P ⟨γ, subdiagram_self γ⟩).2 x (nth_cell_mem hsc)
 
   let γ' : YoungDiagram := γ.sub (Finsupp.single x'.1 1)
@@ -114,9 +165,27 @@ def pi (γ : YoungDiagram) (n : ℕ) (h : γ.card = n) :
     omega
   let T : SemistandardYoungTableau γ := extend T'.1
     (sub_valid γ (Finsupp.single x'.1 1) (sub_cond_of_remove_corner γ x' hccx')) (n - 1) han
-
+  use ⟨T, by
+    have hT' := T'.2
+    unfold SemistandardYoungTableauWithContent at hT'
+    rw [Set.mem_setOf] at hT'
+    simp [SemistandardYoungTableauWithContent, T]
+    rw [extend_content _ hγ', hT', h, hγ'n, show n - (n - 1) = 1 by omega]
+    nth_rw 2 [show n - 1 = (Multiset.replicate (n - 1) 1).card by simp]
+    rw [← Multiset.cons_fromCounts_of_min, ← Multiset.replicate_succ,
+      show n - 1 + 1 = n by omega]
+    · simp [Multiset.mem_replicate]
+    ⟩
 
   sorry
+
+def sigma (γ : YoungDiagram) (n : ℕ) (h : γ.card = n) :
+  SemistandardYoungTableauWithContent γ (Multiset.replicate n 1) ×
+  (PointerTableau γ) × ((μ : Subdiagram γ) → {P : PointerTableau μ | IsStrict P}) →
+  PermWord n × ((μ : Subdiagram γ) → {P : PointerTableau μ | IsStrict P}) :=
+  fun (T, K, Q) ↦ by
+
+    sorry
 
 theorem hookLength_formula_card (γ : YoungDiagram) {n : ℕ} (h : γ.card = n) :
     Nat.card (PermWord n × ((μ : Subdiagram γ) → {P : PointerTableau μ | IsStrict P})) =

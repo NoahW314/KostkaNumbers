@@ -1,6 +1,8 @@
 import Mathlib
 import KostkaNumbers.Recursion
 
+/-
+
 open YoungDiagram
 
 namespace Fin
@@ -124,6 +126,8 @@ def computeKostka (γ : YoungDiagram) (μ : Multiset ℕ) :=
   (μ.erase (min_el μ hμ))
   termination_by μ.card
   decreasing_by exact Multiset.card_erase_lt_of_mem (min_el_mem hμ)
+
+-/
 
 /-
 lemma computeKostka11 : computeKostka (horizontalDiagram 1) ({1} : Multiset ℕ) = 0 := by

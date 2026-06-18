@@ -1,3 +1,9 @@
+/-
+Copyright (c) 2026 Noah Walker. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Noah Walker
+-/
+
 import Mathlib
 import KostkaNumbers.Content
 
@@ -5,11 +11,14 @@ namespace SemistandardYoungTableau
 
 def coe {γ γ' : YoungDiagram} (T : SemistandardYoungTableau γ) (h : γ = γ') :
   SemistandardYoungTableau γ' := ⟨T.entry, by
-  rw [to_fun_eq_coe, ← h]; exact T.row_weak
-  , by
-  rw [to_fun_eq_coe, ← h]; exact T.col_strict
-  , by
-  rw [to_fun_eq_coe, ← h]; exact T.zeros
+    rw [to_fun_eq_coe, ← h]
+    exact T.row_weak,
+  by
+    rw [to_fun_eq_coe, ← h]
+    exact T.col_strict,
+  by
+    rw [to_fun_eq_coe, ← h]
+    exact T.zeros
   ⟩
 
 @[simp] lemma coe_eval {γ γ' : YoungDiagram} {T : SemistandardYoungTableau γ} {h : γ = γ'}

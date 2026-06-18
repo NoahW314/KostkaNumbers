@@ -1,3 +1,9 @@
+/-
+Copyright (c) 2026 Noah Walker. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Noah Walker
+-/
+
 import Mathlib
 
 
@@ -5,84 +11,63 @@ namespace Multiset
 
 section Counts
 
-variable {α : Type*} [DecidableEq α]
+variable {α : Type*} [DecidableEq α] (M : Multiset α)
 
-def counts (M : Multiset α) : Multiset ℕ :=
-  Multiset.map (fun x : α => Multiset.count x M) M.dedup
+def counts : Multiset ℕ := Multiset.map (fun x : α => Multiset.count x M) M.dedup
 
-@[simp] lemma zero_notMem_counts {M : Multiset α} : 0 ∉ M.counts := by simp [counts]
+@[simp] lemma zero_notMem_counts : 0 ∉ M.counts := by simp [counts]
 
-@[simp] lemma counts_pos {M : Multiset α} : ∀ n ∈ M.counts, n > 0 := by
-  intro n; rw [gt_iff_lt, Nat.pos_iff_ne_zero]
-  contrapose!; intro h; rw [h]; exact zero_notMem_counts
+@[simp] lemma counts_pos (n : ℕ) (hn : n ∈ M.counts) : n > 0 := by
+  grind [zero_notMem_counts]
 
-lemma bot_counts_iff {M : Multiset ℕ} : M.counts = ⊥ ↔ M = ⊥ := by
+lemma bot_counts_iff : M.counts = ⊥ ↔ M = ⊥ := by
   simp [counts, dedup_eq_zero]
 
-lemma sum_counts_eq_card (M : Multiset ℕ) : Multiset.sum M.counts = M.card := by
-  simp [counts]
-  rw [Finset.sum_multiset_map_count]
-  simp [Multiset.count_dedup]
-  have hms : ∀ a ∈ M, a ∈ M.toFinset := by simp
-  rw [← Multiset.sum_count_eq_card hms]
-  apply Finset.sum_congr (rfl)
-  intro x hx; rw [mem_toFinset] at hx
-  simp only [hx, reduceIte]
+lemma sum_counts_eq_card : M.counts.sum = M.card := by
+  simp only [counts, Finset.sum_multiset_map_count, toFinset_dedup, count_dedup, smul_eq_mul,
+    ite_mul, one_mul, zero_mul,
+    ← Multiset.sum_count_eq_card (s := M.toFinset) (m := M) (by simp)]
+  exact Finset.sum_congr rfl (by grind)
 
-lemma counts_card (M : Multiset ℕ) : M.counts.card = M.toFinset.card := by
-  simp [counts]
-  exact rfl
+lemma counts_card : M.counts.card = M.toFinset.card := by
+  simp only [counts, card_map]
+  rfl
 
-lemma counts_replicate (n a : ℕ) (hn : n ≠ 0) : (Multiset.replicate n a).counts = {n} := by
-  simp only [counts, count_replicate]
-  refine map_eq_singleton.mpr ?_
-  use a; constructor
-  · rw [← nsmul_singleton]
-    rw [dedup_nsmul hn, dedup_singleton]
-  · simp
+lemma counts_replicate {n : ℕ} (a : α) (hn : n ≠ 0) : (replicate n a).counts = {n} := by
+  simp_rw [counts, count_replicate, map_eq_singleton]
+  use a
+  simp [← nsmul_singleton, dedup_nsmul hn]
 
+-- upstream (and fix List.replicate_dedup)
+lemma replicate_dedup {x : α} {k : ℕ} (h : k ≠ 0) : (replicate k x).dedup = {x} := by
+  simp [← coe_replicate, List.replicate_dedup h]
 
-lemma replicate_dedup {α : Type*} [DecidableEq α] (a : α) (n : ℕ) (h : n ≠ 0) :
-    (replicate n a).dedup = {a} := by
-  ext b
-  by_cases hab : a = b
-  · simp [hab, mem_replicate, h]
-  · push_neg at hab; symm at hab
-    simp [hab, mem_replicate]
-
-lemma replicate_add_counts_of_notMem {a : α} {M : Multiset α} (h : a ∉ M) (n : ℕ) (hn : n ≠ 0) :
-    ((replicate n a) + M).counts = M.counts + {n} := by
-  simp [counts, count_replicate]
+lemma replicate_add_counts_of_notMem {a : α} {M : Multiset α} {n : ℕ} (h : a ∉ M) (hn : n ≠ 0) :
+    ((replicate n a) + M).counts = {n} + M.counts := by
+  simp only [counts, count_add, count_replicate]
   ext m
-  rw [count_add, count_map, count_map]
-  rw [Disjoint.dedup_add, replicate_dedup a n hn, filter_add, card_add, add_comm]
+  rw [count_add, count_map, count_map, Disjoint.dedup_add, replicate_dedup hn, filter_add,
+    card_add]
   · by_cases hmn : m = n
-    · simp [hmn]
+    · simp only [hmn, nodup_singleton, mem_singleton, count_eq_one_of_mem]
       · congr 2
-        · refine filter_congr ?_
-          intro x hx
-          rw [mem_dedup] at hx
-          have hax : a ≠ x := by contrapose! h; rw [h]; exact hx
-          simp [hax]
-        · rw [card_eq_one]; use a
-          rw [filter_eq_self]
+        · rw [card_eq_one]
+          use a
           simp [h]
-    · rw [← count_pos, Nat.pos_iff_ne_zero] at h; push_neg at h
-      simp [hmn, filter_singleton, h]
-      congr 1
+        · exact filter_congr (by grind [mem_dedup])
+    · rw [← count_pos, Nat.pos_iff_ne_zero] at h
+      push Not at h
+      simp only [filter_singleton, ↓reduceIte, h, add_zero, hmn, empty_eq_zero, card_zero,
+        mem_singleton, not_false_eq_true, count_eq_zero_of_notMem]
+      congr 2
       refine filter_congr ?_
       intro x hx
-      rw [mem_dedup] at hx
       have hax : a ≠ x := by
-        rw [← count_pos, Nat.pos_iff_ne_zero] at hx
-        contrapose! hx
-        rw [← hx]; exact h
+        rw [mem_dedup, ← count_pos, Nat.pos_iff_ne_zero] at hx
+        grind
       simp [hax]
   · refine disjoint_left.mpr ?_
-    intro b hb
-    rw [mem_replicate] at hb
-    simp only [ne_eq, hn, not_false_eq_true, true_and] at hb
-    rw [hb]; exact h
+    simp_all [mem_replicate]
 
 
 end Counts

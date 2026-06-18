@@ -1,16 +1,16 @@
+/-
+Copyright (c) 2026 Noah Walker. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Noah Walker
+-/
+
 import Mathlib
 import KostkaNumbers.Util.Util
 import KostkaNumbers.Diagrams
 
 open SemistandardYoungTableau YoungDiagram
 
-namespace List
-
-variable {α : Type*}
-
-end List
-
-def verticalDiagram (n : ℕ) := ofRowLens (List.replicate n 1) <| (List.sorted_ge_replicate n 1)
+def verticalDiagram (n : ℕ) := ofRowLens (List.replicate n 1) (List.sortedGE_replicate n)
 
 
 @[simp] lemma verticalDiagram_card {n : ℕ} : (verticalDiagram n).card = n := by

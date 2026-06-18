@@ -1,11 +1,20 @@
+/-
+Copyright (c) 2026 Noah Walker. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Noah Walker
+-/
+
 import Mathlib
 import KostkaNumbers.Coe
 import KostkaNumbers.Diagrams
 import KostkaNumbers.Content
 import KostkaNumbers.ComputationProof.RowColEq
 
-open SemistandardYoungTableau
-open YoungDiagram
+/-!
+Definition of Kostka numbers and some basic lemmas about them.
+-/
+
+open SemistandardYoungTableau YoungDiagram
 
 /-
 Convention: Use capital letters for normal multisets and Greek letters for partition-like multisets
@@ -28,7 +37,7 @@ lemma finite_ssyt_content (γ : YoungDiagram) (μ : Multiset ℕ) :
     (γ.cells → {n // n ∈ μ.fromCounts}) := fun ⟨T, hT⟩ ↦ (fun ⟨x, hx⟩ ↦ ⟨T x.1 x.2, by
       rw [Set.mem_setOf] at hT
       rw [← hT]
-      exact mem_content_of_mem_cells hx⟩)
+      exact mem_content_of_mem hx⟩)
   refine Finite.of_injective f ?_
   intro ⟨T, hT⟩ ⟨T', hT'⟩ hf
   simp only [Subtype.mk.injEq]
@@ -59,7 +68,8 @@ lemma kostkaNumber_eq_card_ssyt_content : kostkaNumber γ μ =
 theorem kostka_eq_zero {γ : YoungDiagram} {μ : Multiset ℕ}
     (h : ∀ T : SemistandardYoungTableau γ, T.content ≠ μ.fromCounts) : kostkaNumber γ μ = 0 := by
   rw [kostkaNumber, Nat.card_eq_zero]
-  left; exact Subtype.isEmpty_of_false h
+  left
+  exact Subtype.isEmpty_of_false h
 
 theorem kostka_eq_zero_iff_forall_not {γ : YoungDiagram} {μ : Multiset ℕ} :
     kostkaNumber γ μ = 0 ↔ ∀ T : SemistandardYoungTableau γ, T.content ≠ μ.fromCounts := by
@@ -81,11 +91,11 @@ lemma kostka_bot_bot : kostkaNumber ⊥ ⊥ = 1 := by
 
 theorem kostka_ne_card (γ : YoungDiagram) (μ : Multiset ℕ) (h : γ.card ≠ μ.sum) :
     kostkaNumber γ μ = 0 := by
-  apply kostka_eq_zero
+  refine kostka_eq_zero ?_
   intro T
   contrapose! h
-  symm; rw [← Multiset.fromCounts_card, ← h]
-  exact content_card_eq_card
+  rw [← Multiset.fromCounts_card, ← h]
+  exact content_card_eq_card.symm
 
 lemma eq_highestWeight_ge_row (h : T.content = (Multiset.ofList γ.rowLens).fromCounts)
     (i₀ i j : ℕ) (hi : i ≥ i₀) : T i j = (highestWeight γ) i j := by
@@ -95,15 +105,14 @@ lemma eq_highestWeight_ge_row (h : T.content = (Multiset.ofList γ.rowLens).from
       rw [← mem_iff_lt_colLen]
       exact γ.up_left_mem hi (Nat.zero_le j) hi₀
     rw [T.zeros hij, (highestWeight γ).zeros hij]
-  · push_neg at hi₀
+  · push Not at hi₀
     have hT : ∀ i' ≥ i₀ + 1, ∀ j', T i' j' = (highestWeight γ) i' j' := by
       intro i' hi' j'
       exact eq_highestWeight_ge_row h (i₀ + 1) i' j' hi'
     suffices T i₀ j = (highestWeight γ) i₀ j by
       by_cases hi₀' : i = i₀
       · rw [hi₀', this]
-      · have hi' : i ≥ i₀ + 1 := by omega
-        exact hT i hi' j
+      · exact hT i (by lia) j
     by_cases hij : (i₀, j) ∈ γ
     · conv => rhs; simp only [highestWeight, DFunLike.coe, hij, reduceIte]
       refine antisymm (entry_ge_col hij) ?_
@@ -112,8 +121,8 @@ lemma eq_highestWeight_ge_row (h : T.content = (Multiset.ofList γ.rowLens).from
       contrapose! h
       refine ne_of_gt ?_
       rw [Multiset.count_fromCounts hTc]
-      simp [List.coe_ofList_sorted (rowLens_sorted γ), content, Multiset.count_map,
-        rowLen_eq_card]
+      simp only [ge_iff_le, Multiset.coe_sort, List.mergeSort_eq_self _ γ.rowLens_sorted.pairwise,
+        get_rowLens, rowLen_eq_card, content, Multiset.count_map]
       refine Multiset.card_lt_card ?_
       refine lt_of_le_of_ne ?_ ?_
       · rw [Multiset.le_iff_subset (γ.row (T i₀ j)).nodup]
@@ -122,8 +131,7 @@ lemma eq_highestWeight_ge_row (h : T.content = (Multiset.ofList γ.rowLens).from
         intro hx hxT
         simp only [hx, true_and]
         specialize hT x.1 ?_ x.2
-        · rw [hxT]
-          exact h
+        · rwa [hxT]
         · simp only [highestWeight_apply, Prod.mk.eta, hx, ↓reduceIte] at hT
           rw [hT, hxT]
       · apply_fun Multiset.count (i₀, j)
@@ -135,8 +143,7 @@ lemma eq_highestWeight_iff :
     T = highestWeight γ ↔ T.content = (Multiset.ofList γ.rowLens).fromCounts := by
   constructor
   · intro h
-    rw [h]
-    exact highestWeight_content
+    exact h ▸ highestWeight_content
   · intro h
     ext i j
     exact eq_highestWeight_ge_row h 0 i j (Nat.zero_le i)

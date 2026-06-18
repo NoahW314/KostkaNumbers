@@ -1,3 +1,9 @@
+/-
+Copyright (c) 2026 Noah Walker. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Noah Walker
+-/
+
 import Mathlib
 import KostkaNumbers.Util.Util
 
@@ -16,31 +22,22 @@ lemma get_zero_ge_of_dominates {L L' : List ℕ} (h : L ⊵ L') (hL : 0 < L.leng
     ext x; simp [Fin.eq_mk_iff_val_eq]
   have hL'0 : Finset.filter (fun i : Fin L'.length => i.1 ≤ 0) Finset.univ = {⟨0, hL'⟩} := by
     ext x; simp [Fin.eq_mk_iff_val_eq]
-  rw [hL0, hL'0, Finset.sum_singleton, Finset.sum_singleton,
+  rwa [hL0, hL'0, Finset.sum_singleton, Finset.sum_singleton,
     List.get_eq_getElem, List.get_eq_getElem] at h
-  exact h
 
 lemma lengths_le_of_dominates {L L' : List ℕ} (hd : L ⊵ L') (h : L.sum = L'.sum)
     (hp : ∀ i, L.get i > 0) :
     L.length ≤ L'.length := by
   by_cases h0 : L'.length = 0
   · rw [h0]
-    suffices Multiset.ofList L = 0 by
-      simp at this
-      simp [this]
+    suffices Multiset.ofList L = 0 by simpa using this
     rw [← Multiset.sum_eq_zero_iff_eq_zero, Multiset.sum_coe, h]
     · simp only [List.length_eq_zero_iff] at h0
       rw [h0, List.sum_nil]
-    · contrapose! hp
-      rw [Multiset.mem_coe] at hp
-      apply List.get_of_mem at hp
-      obtain ⟨i, hi⟩ := hp
-      use i; rw [hi]
-
+    · grind [Multiset.mem_coe, List.get_of_mem]
   contrapose! h
   specialize hd (L'.length-1)
-  symm
-  refine ne_of_lt ?_
+  refine ne_of_gt ?_
   simp only [List.get_eq_getElem, ge_iff_le] at hd
   have hLs : L'.sum = ∑ x : Fin L'.length with x.1 ≤ L'.length - 1, L'[x.1] := by
     rw [← Fin.sum_univ_getElem]
@@ -50,14 +47,12 @@ lemma lengths_le_of_dominates {L L' : List ℕ} (hd : L ⊵ L') (h : L.sum = L'.
     exact Nat.le_sub_one_of_lt x.2
   rw [hLs]
   refine lt_of_le_of_lt hd ?_
-  rw[← Fin.sum_univ_getElem]
-  let i := (⟨L.length-1, by exact Nat.sub_one_lt_of_lt h⟩ : Fin L.length)
+  rw [← Fin.sum_univ_getElem]
+  let i := (⟨L.length - 1, Nat.sub_one_lt_of_lt h⟩ : Fin L.length)
   refine Finset.sum_lt_sum_of_subset ?_ (Finset.mem_univ i) ?_ ?_ ?_
   · simp
   · simp [i]
-    refine lt_of_le_of_lt ?_ h
-    refine le_of_eq ?_
-    exact Nat.succ_pred_eq_of_ne_zero h0
+    lia
   · rw [← List.get_eq_getElem]
     exact hp i
   · simp
@@ -65,74 +60,53 @@ lemma lengths_le_of_dominates {L L' : List ℕ} (hd : L ⊵ L') (h : L.sum = L'.
 lemma sum_two_le_of_dominates {L L' : List ℕ} (hd : L ⊴ L')
   (hL : 1 < L.length) (hL' : 1 < L'.length) : L[0] + L[1] ≤ L'[0] + L'[1] := by
   specialize hd 1
-  simp at hd
   have hL1 : Finset.filter (fun i : Fin L.length => i.1 ≤ 1) Finset.univ =
-      {⟨0, by omega⟩, ⟨1, hL⟩} := by
-    ext x
-    simp [Fin.eq_mk_iff_val_eq]
-    exact Nat.le_one_iff_eq_zero_or_eq_one
+      {⟨0, by lia⟩, ⟨1, hL⟩} := by grind
   have hL'1 : Finset.filter (fun i : Fin L'.length => i.1 ≤ 1) Finset.univ =
-      {⟨0, by omega⟩, ⟨1, hL'⟩} := by
-    ext x
-    simp [Fin.eq_mk_iff_val_eq]
-    exact Nat.le_one_iff_eq_zero_or_eq_one
-  rw [hL1, hL'1] at hd
-  simp at hd
-  exact hd
+      {⟨0, by lia⟩, ⟨1, hL'⟩} := by grind
+  grind
 
 lemma sum_three_le_of_dominates {L L' : List ℕ} (hd : L ⊴ L')
     (hL : 2 < L.length) (hL' : 2 < L'.length) :
     L[0] + L[1] + L[2] ≤ L'[0] + L'[1] + L'[2] := by
   specialize hd 2
-  simp at hd
   have hL1 : Finset.filter (fun i : Fin L.length => i.1 ≤ 2) Finset.univ =
-      {⟨0, by omega⟩, ⟨1, by omega⟩, ⟨2, hL⟩} := by
-    ext x
-    simp [Fin.eq_mk_iff_val_eq]
-    omega
+      {⟨0, by lia⟩, ⟨1, by lia⟩, ⟨2, hL⟩} := by grind
   have hL1' : Finset.filter (fun i : Fin L'.length => i.1 ≤ 2) Finset.univ =
-      {⟨0, by omega⟩, ⟨1, by omega⟩, ⟨2, hL'⟩} := by
-    ext x
-    simp [Fin.eq_mk_iff_val_eq]
-    omega
-  rw [hL1, hL1'] at hd
-  simp at hd
-  ring_nf at hd
-  exact hd
+      {⟨0, by lia⟩, ⟨1, by lia⟩, ⟨2, hL'⟩} := by grind
+  grind
 
-lemma dominates_self {L : List ℕ} : L ⊴ L := by intro r; rfl
+@[simp] lemma dominates_self {L : List ℕ} : L ⊴ L := by intro r; rfl
 
-lemma dominates_nil {L : List ℕ} : [] ⊴ L := by intro r; simp
+@[simp] lemma dominates_nil {L : List ℕ} : [] ⊴ L := by intro r; simp
+
+@[simp] lemma dominates_zero {L : List ℕ} : [0] ⊴ L := by intro r; simp
+
+lemma List.sum_eq_zero_iff' {M : Type*} [AddCommMonoid M] [PartialOrder M]
+    [IsOrderedAddMonoid M] [CanonicallyOrderedAdd M] {l : List M} :
+    l.sum = 0 ↔ ∀ i : Fin (l.length), l.get i = 0 := by
+  rw [List.sum_eq_zero_iff]
+  constructor
+  · intro h i
+    exact h (l.get i) <| get_mem l i
+  · intro h x hx
+    obtain ⟨i, hi⟩ := List.get_of_mem hx
+    rw [← hi]
+    exact h i
 
 lemma nil_dominates_of_sum_eq_zero {L : List ℕ} (h : L.sum = 0) : L ⊴ [] := by
+  simp only [List.sum_eq_zero_iff', List.get_eq_getElem] at h
   intro r
   simp only [List.length_nil, Finset.univ_eq_empty, Finset.filter_empty, List.get_eq_getElem,
     Finset.sum_empty, ge_iff_le, nonpos_iff_eq_zero, Finset.sum_eq_zero_iff, Finset.mem_filter,
     Finset.mem_univ, true_and]
   intro i hi
-  rw [List.sum_eq_zero_iff] at h
-  refine h _ ?_
-  exact List.getElem_mem i.isLt
-
-lemma dominates_of_max_length_eq_zero {L L' : List ℕ} (h : max L.length L'.length = 0) :
-    L ⊴ L' := by
-  suffices L = L' by rw [this]; exact dominates_self
-  rw [← Nat.le_zero, Nat.max_le, Nat.le_zero, Nat.le_zero, List.length_eq_zero_iff,
-    List.length_eq_zero_iff] at h
-  rw [h.1, h.2]
+  exact h i
 
 lemma sum_with_eq_sum_with_length {L : List ℕ} {r : ℕ} (hr : r ≥ L.length - 1) :
     ∑ i : Fin L.length with i.1 ≤ r, L.get i =
-    ∑ i : Fin L.length with i.1 ≤ L.length - 1, L.get i := by
-  symm
-  refine Finset.sum_subset ?_ ?_
-  · intro i
-    simp only [Finset.mem_filter, Finset.mem_univ, true_and]
-    intro hi
-    exact Nat.le_trans hi hr
-  · simp only [Finset.mem_filter, Finset.mem_univ, true_and, not_le, List.get_eq_getElem]
-    intro x hx hxl
-    omega
+    ∑ i : Fin L.length with i.1 ≤ L.length - 1, L.get i :=
+  (Finset.sum_subset (by grind) (by grind)).symm
 
 lemma sum_with_eq_sum_with {L : List ℕ} {r s : ℕ} (hr : r ≥ L.length - 1) (hs : s ≥ L.length - 1) :
     ∑ i : Fin L.length with i.1 ≤ r, L.get i =
@@ -140,86 +114,52 @@ lemma sum_with_eq_sum_with {L : List ℕ} {r s : ℕ} (hr : r ≥ L.length - 1) 
   rw [sum_with_eq_sum_with_length hr, sum_with_eq_sum_with_length hs]
 
 lemma sum_with_eq_sum_univ {L : List ℕ} (r : ℕ) (h : r ≥ L.length - 1) :
-    ∑ i, L.get i = ∑ i with i.1 ≤ r, L.get i := by
-  symm
-  refine Finset.sum_subset ?_ ?_
-  · simp
-  · simp only [Finset.mem_univ, Finset.mem_filter, true_and, not_le, List.get_eq_getElem,
-      forall_const]
-    intro x hx
-    omega
-
-lemma dominates_of_forall_lt_max {L L' : List ℕ} (h : ∀ r < max L.length L'.length,
-    ∑ i : Fin L.length with i.1 ≤ r, L.get i ≤
-    ∑ i : Fin L'.length with i.1 ≤ r, L'.get i) : L ⊴ L' := by
-  by_cases hle : max L.length L'.length = 0
-  · exact dominates_of_max_length_eq_zero hle
-
-  intro r
-  by_cases hr : r < max L.length L'.length
-  · exact h r hr
-  · specialize h ((max L.length L'.length) - 1) (Nat.sub_one_lt hle)
-    push_neg at hr
-    rw [Nat.max_le] at hr
-    obtain ⟨hrL, hrL'⟩ := hr
-    apply le_trans (Nat.sub_le L.length 1) at hrL
-    apply le_trans (Nat.sub_le L'.length 1) at hrL'
-    have hmL : max L.length L'.length - 1 ≥ L.length - 1 := by omega
-    have hmL' : max L.length L'.length - 1 ≥ L'.length - 1 := by omega
-    rw [sum_with_eq_sum_with hrL hmL, sum_with_eq_sum_with hrL' hmL']
-    exact h
+    ∑ i, L.get i = ∑ i with i.1 ≤ r, L.get i :=
+  (Finset.sum_subset (by simp) (by grind)).symm
 
 lemma dominates_of_forall_lt_length {L L' : List ℕ} (h : ∀ r < L.length,
     ∑ i : Fin L.length with i.1 ≤ r, L.get i ≤
-    ∑ i : Fin L'.length with i.1 ≤ r, L'.get i) (hle : min L.length L'.length ≠ 0) :
+    ∑ i : Fin L'.length with i.1 ≤ r, L'.get i) :
     L ⊴ L' := by
+  by_cases! hL0 : L.length = 0
+  · grind [dominates_nil]
+  by_cases! hL0' : L'.length = 0
+  · specialize h (L.length - 1) (by lia)
+    simp_rw [← sum_with_eq_sum_univ _ (by rfl), List.get_eq_getElem, Fin.sum_univ_getElem] at h
+    rw [Finset.sum_eq_zero, Nat.le_zero] at h
+    · rw [List.length_eq_zero_iff] at hL0'
+      rw [hL0']
+      exact nil_dominates_of_sum_eq_zero h
+    · lia
   intro r
+  have hle : min L.length L'.length ≠ 0 := by grind
   by_cases hr : r < L.length
   · exact h r hr
-  · push_neg at hr
-    have hr : r ≥ L.length - 1 := by omega
+  · push Not at hr
+    have hr : r ≥ L.length - 1 := by lia
     rw [sum_with_eq_sum_with hr (by rfl)]
-    specialize h (L.length - 1) (by omega)
-    refine le_trans h ?_
-    refine Finset.sum_le_sum_of_subset ?_
-    intro x
-    simp
-    omega
+    specialize h (L.length - 1) (by grind)
+    refine le_trans h <| Finset.sum_le_sum_of_subset ?_
+    grind
 
 lemma dominates_of_forall_lt_min {L L' : List ℕ} (h : ∀ r < min L.length L'.length,
     ∑ i : Fin L.length with i.1 ≤ r, L.get i ≤
     ∑ i : Fin L'.length with i.1 ≤ r, L'.get i) (hs : L.sum = L'.sum) : L ⊴ L' := by
-  by_cases hle : min L.length L'.length = 0
-  · rw [min_eq_iff, List.length_eq_zero_iff, List.length_eq_zero_iff] at hle
-    rcases hle with hL | hL'
-    · rw [hL.1]
-      exact dominates_nil
-    · rw [hL'.1]
-      rw [hL'.1, List.sum_nil] at hs
-      exact nil_dominates_of_sum_eq_zero hs
-
-  refine dominates_of_forall_lt_length ?_ hle
-
+  refine dominates_of_forall_lt_length ?_
   intro r hr'
   by_cases hr : r < min L.length L'.length
   · exact h r hr
-  · push_neg at hr
-    conv => rhs; rw [← sum_with_eq_sum_univ _ (by omega)]
-    simp only [List.get_eq_getElem]
-    rw [Fin.sum_univ_getElem, ← hs, ← Fin.sum_univ_getElem]
+  · push Not at hr
+    conv => rhs; rw [← sum_with_eq_sum_univ _ (by grind)]
+    simp_rw [List.get_eq_getElem, Fin.sum_univ_getElem, ← hs, ← Fin.sum_univ_getElem]
     refine Finset.sum_le_sum_of_subset ?_
     simp
 
 lemma sum_le_sum_of_dominates {L L' : List ℕ} (hd : L ⊴ L') : L.sum ≤ L'.sum := by
-  rw [← Fin.sum_univ_getElem, ← Fin.sum_univ_getElem]
-  simp [← List.get_eq_getElem]
-  rw [sum_with_eq_sum_univ (max L.length L'.length - 1) (by omega),
-    sum_with_eq_sum_univ (max L.length L'.length - 1) (by omega)]
+  simp_rw [← Fin.sum_univ_getElem, ← List.get_eq_getElem]
+  rw [sum_with_eq_sum_univ (max L.length L'.length - 1) (by grind),
+    sum_with_eq_sum_univ (max L.length L'.length - 1) (by grind)]
   exact hd (max L.length L'.length - 1)
-
-
-
-@[simp] lemma dominates_zero {L : List ℕ} : [0] ⊴ L := by intro r; simp
 
 lemma dominates_singleton_iff {L : List ℕ} {n : ℕ} (h : L.sum = n) (hn : n ≠ 0)
     (hp : ∀ i : Fin (L.length), L[i.1] > 0) : ([n] ⊴ L) ↔ L = [n] := by
@@ -227,20 +167,16 @@ lemma dominates_singleton_iff {L : List ℕ} {n : ℕ} (h : L.sum = n) (hn : n �
   · intro hd
     have hL : L.length ≤ 1 := by
       apply lengths_le_of_dominates at hd
-      simp [h, hp] at hd
-      exact hd
+      simpa [h, hp] using hd
     have hL0 : L.length > 0 := by
       refine List.length_pos_of_sum_ne_zero _ ?_
-      rw [h]
-      exact hn
-    have hL1 : L.length = 1 := by omega
+      rwa [h]
+    have hL1 : L.length = 1 := by lia
     rw [List.length_eq_one_iff] at hL1
     obtain ⟨m, hm⟩ := hL1
     rw [hm, List.sum_singleton] at h
     rw [hm, h]
-  · intro hL
-    rw [hL]
-    exact dominates_self
+  · exact (· ▸ dominates_self)
 
 
 
@@ -263,222 +199,19 @@ lemma replicate_one_dominates_iff {L : List ℕ} {n : ℕ} (h : L.sum = n)
       refine antisymm ?_ hd
       rw [← h]
       exact List.length_le_sum_of_one_le _ hp
-  · intro hL
-    rw [hL]
-    exact dominates_self
-
-lemma hasdr {r : ℕ} : {i : ℕ | i ≤ r}.toFinset.card = r + 1 := by
-  refine Finset.card_eq_of_equiv_fin ?_
-  use (fun ⟨x, hx⟩ ↦ ⟨x, by
-    simp at hx
-    exact Order.lt_add_one_iff.mpr hx⟩)
-  · use (fun ⟨x, hx⟩ ↦ ⟨x, by
-      simp
-      exact Nat.le_of_lt_succ hx⟩)
-  · intro x
-    simp
-  · intro x
-    simp
-
-lemma hasd {n r : ℕ} : ({i | i.1 ≤ r} : Finset (Fin n)).card ≤ r + 1 := by
-  rw [← hasdr]
-  let e : { x // x ∈ ({i | i.1 ≤ r} : Finset (Fin n))} →
-    { x // x ∈ {i : ℕ | i ≤ r}.toFinset} :=
-    fun ⟨x, hx⟩ ↦ ⟨x.1, by
-      simp at hx
-      simp [hx]⟩
-  suffices Function.Injective e by exact Finset.card_le_card_of_injective this
-  intro x y hxy
-  simp only [Subtype.mk.injEq, Fin.val_inj, Subtype.coe_inj, e] at hxy
-  exact hxy
-
-lemma hasd2 {n r : ℕ} (h : r < n) : ({i | i.1 ≤ r} : Finset (Fin n)).card = r + 1 := by
-  rw [← hasdr]
-  let e : (x : Fin n) → (hx : x ∈ ({i | i.1 ≤ r} : Finset (Fin n))) → ℕ :=
-    fun x _ ↦ x.1
-  refine Finset.card_bij e ?_ ?_ ?_
-  · simp [e]
-  · simp [e, Fin.val_inj]
-  · simp [e]
-    intro i hi
-    use ⟨i, lt_of_le_of_lt hi h⟩
+  · exact (· ▸ dominates_self)
 
 lemma dominates_replicate_one {L : List ℕ} {n : ℕ} (h : L.sum = n)
     (hp : ∀ x ∈ L, x > 0) : (List.replicate n 1) ⊴ L := by
   refine dominates_of_forall_lt_min ?_ ?_
   · intro r hr
     simp only [List.get_eq_getElem, List.getElem_replicate, Finset.sum_const, smul_eq_mul, mul_one]
-    refine le_trans hasd ?_
     refine le_trans ?_ (Finset.card_nsmul_le_sum _ _ 1 ?_)
-    · rw [smul_eq_mul, mul_one, hasd2]
-      omega
+    · have hiic : ({i : Fin (List.replicate n 1).length | i ≤ r} : Finset _) =
+        Finset.Iic ⟨r, by grind⟩ := by grind
+      have hiic' : ({i : Fin L.length | i ≤ r} : Finset _) =
+        Finset.Iic ⟨r, by grind⟩ := by grind
+      simp [hiic, hiic', Fin.card_Iic]
     · intro i _
       exact hp L[i.1] (List.getElem_mem (Fin.val_lt_of_le i (le_refl L.length)))
   · simp [h]
-
-/-
-Small domination results
--/
-
-lemma singleton_dominates_singleton {a b : ℕ} : ([a] ⊴ [b]) ↔ a ≤ b := by
-  constructor
-  · intro h
-    apply sum_le_sum_of_dominates at h
-    simp at h
-    exact h
-  · intro h
-    refine dominates_of_forall_lt_max ?_
-    simp [h]
-
-lemma singleton_dominates_pair {a b c : ℕ} : ([a, b] ⊴ [c]) ↔ a + b ≤ c := by
-  constructor
-  · intro h
-    apply sum_le_sum_of_dominates at h
-    simp at h
-    exact h
-  · intro h
-    refine dominates_of_forall_lt_max ?_
-    simp
-    intro r hr
-    interval_cases r
-    all_goals simp [Finset.sum_filter, h]
-    · exact Nat.le_of_add_right_le h
-
-lemma singleton_dominates_triple {a b c d : ℕ} : ([a, b, c] ⊴ [d]) ↔ a + b + c ≤ d := by
-  constructor
-  · intro h
-    apply sum_le_sum_of_dominates at h
-    simp [← add_assoc] at h
-    exact h
-  · intro h
-    refine dominates_of_forall_lt_max ?_
-    simp
-    intro r hr
-    interval_cases r
-    all_goals simp [Finset.sum_filter, Fin.sum_univ_three, h]
-    · rw [add_assoc] at h
-      exact Nat.le_of_add_right_le h
-    · exact Nat.le_of_add_right_le h
-
-
-
-lemma pair_dominates_singleton {a b c : ℕ} : ([a] ⊴ [b, c]) ↔ a ≤ b := by
-  constructor
-  · intro h
-    refine get_zero_ge_of_dominates h ?_ ?_
-    all_goals simp
-  · intro h
-    refine dominates_of_forall_lt_max ?_
-    simp
-    intro r hr
-    interval_cases r
-    all_goals simp [Finset.sum_filter, h]
-    · exact Nat.le_add_right_of_le h
-
-lemma pair_dominates_pair {a b c d : ℕ} : ([a, b] ⊴ [c, d]) ↔ a ≤ c ∧ a + b ≤ c + d := by
-  constructor
-  · intro h
-    constructor
-    · refine get_zero_ge_of_dominates h ?_ ?_
-      all_goals simp
-    · apply sum_le_sum_of_dominates at h
-      simp at h
-      exact h
-  · intro ⟨h₁, h₂⟩
-    refine dominates_of_forall_lt_max ?_
-    simp
-    intro r hr
-    interval_cases r
-    all_goals simp [Finset.sum_filter, h₁, h₂]
-
-lemma pair_dominates_triple {a b c d e : ℕ} : ([a, b, c] ⊴ [d, e]) ↔
-    a ≤ d ∧ a + b + c ≤ d + e := by
-  constructor
-  · intro h
-    constructor
-    · refine get_zero_ge_of_dominates h ?_ ?_
-      all_goals simp
-    · apply sum_le_sum_of_dominates at h
-      simp at h
-      rw [add_assoc]
-      exact h
-  · intro ⟨h₁, h₂⟩
-    refine dominates_of_forall_lt_max ?_
-    simp
-    intro r hr
-    interval_cases r
-    all_goals simp [Finset.sum_filter, Fin.sum_univ_three, h₁, h₂]
-    · exact Nat.le_of_add_right_le h₂
-
-
-lemma triple_dominates_singleton {a b c d : ℕ} : ([a] ⊴ [b, c, d]) ↔ a ≤ b := by
-  constructor
-  · intro h
-    refine get_zero_ge_of_dominates h ?_ ?_
-    all_goals simp
-  · intro h
-    refine dominates_of_forall_lt_max ?_
-    simp
-    intro r hr
-    interval_cases r
-    all_goals simp [Finset.sum_filter, h, Fin.sum_univ_three]
-    · exact Nat.le_add_right_of_le h
-    · rw [add_assoc]
-      exact Nat.le_add_right_of_le h
-
-lemma triple_dominates_pair {a b c d e : ℕ} : ([a, b] ⊴ [c, d, e]) ↔
-    a ≤ c ∧ a + b ≤ c + d := by
-  constructor
-  · intro h
-    constructor
-    · refine get_zero_ge_of_dominates h ?_ ?_
-      all_goals simp
-    · refine sum_two_le_of_dominates h ?_ ?_
-      all_goals simp
-  · intro ⟨h₁, h₂⟩
-    refine dominates_of_forall_lt_max ?_
-    simp
-    intro r hr
-    interval_cases r
-    all_goals simp [Finset.sum_filter, Fin.sum_univ_three, h₁, h₂]
-    · exact Nat.le_add_right_of_le h₂
-
-lemma triple_dominates_triple {a b c d e f : ℕ} : ([a, b, c] ⊴ [d, e, f]) ↔
-    a ≤ d ∧ a + b ≤ d + e ∧ a + b + c ≤ d + e + f := by
-  constructor
-  · intro h
-    constructor; swap; constructor
-    · refine sum_two_le_of_dominates h ?_ ?_
-      all_goals simp
-    · apply sum_le_sum_of_dominates at h
-      simp [← add_assoc] at h
-      exact h
-    · refine get_zero_ge_of_dominates h ?_ ?_
-      all_goals simp
-  · intro ⟨h₁, h₂, h₃⟩
-    refine dominates_of_forall_lt_max ?_
-    simp
-    intro r hr
-    interval_cases r
-    all_goals simp [Finset.sum_filter, Fin.sum_univ_three, h₁, h₂, h₃]
-
-
-lemma quad_dominates_triple {a b c d e f g : ℕ} : ([a, b, c] ⊴ [d, e, f, g]) ↔
-    a ≤ d ∧ a + b ≤ d + e ∧ a + b + c ≤ d + e + f := by
-  constructor
-  · intro h
-    constructor; swap; constructor
-    · refine sum_two_le_of_dominates h ?_ ?_
-      all_goals simp
-    · refine sum_three_le_of_dominates h ?_ ?_
-      all_goals simp
-    · refine get_zero_ge_of_dominates h ?_ ?_
-      all_goals simp
-  · intro ⟨h₁, h₂, h₃⟩
-    refine dominates_of_forall_lt_max ?_
-    simp
-    intro r hr
-    interval_cases r
-    all_goals simp [Finset.sum_filter, Fin.sum_univ_three, Fin.sum_univ_four,
-      h₁, h₂, h₃]
-    exact Nat.le_add_right_of_le h₃

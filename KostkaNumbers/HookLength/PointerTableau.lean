@@ -19,7 +19,7 @@ def bot_pointer : PointerTableau ⊥ := ⟨fun x ↦ (0, 0), by simp, by simp⟩
 
 
 def IsStrict {γ : YoungDiagram} (P : PointerTableau γ) :=
-  ∀ x ∈ γ, ¬ γ.IsCornerCell x → P.pointer x ≠ x
+  ∀ x ∈ γ, x ∉ γ.corners → P.pointer x ≠ x
 
 lemma pointerTableau_card (γ : YoungDiagram) :
     Nat.card (PointerTableau γ) = ∏ x ∈ γ.cells, γ.hookLength x.1 x.2 := by
@@ -86,7 +86,8 @@ lemma strictPointerTableau_nonempty (γ : YoungDiagram) :
   rw [Set.mem_setOf_eq]
   intro x hx hcc
   unfold P
-  rw [corner_iff_hookLength_eq_one _ _ hx] at hcc
+  simp only [corners, Finset.mem_filter, mem_cells, hx, corner_iff_hookLength_eq_one _ _ hx,
+    true_and] at hcc
   simp only [hx, hcc, ↓reduceDIte, Prod.mk.eta, ne_eq]
   let hxc := Classical.choose_spec (γ.exists_hook_of_hookLength_ne_one x.1 x.2 hx hcc)
   exact hxc.2
@@ -193,8 +194,8 @@ lemma followPath_pointer {γ : YoungDiagram} (P : PointerTableau γ) (x : ℕ ×
   termination_by γ.hookLength x.1 x.2
   decreasing_by exact pointer_hookLength_lt hx hP
 
-lemma followPath_isCornerCell {γ : YoungDiagram} {P : PointerTableau γ} (hP : IsStrict P)
-    (x : ℕ × ℕ) (hx : x ∈ γ) : IsCornerCell γ (followPath P x hx) := by
+lemma followPath_mem_corners {γ : YoungDiagram} {P : PointerTableau γ} (hP : IsStrict P)
+    (x : ℕ × ℕ) (hx : x ∈ γ) : (followPath P x hx) ∈ γ.corners := by
   unfold IsStrict at hP
   specialize hP (followPath P x hx) (followPath_mem_diagram P x hx)
   contrapose! hP

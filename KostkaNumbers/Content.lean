@@ -1,6 +1,11 @@
+/-
+Copyright (c) 2026 Noah Walker. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Noah Walker
+-/
+
 import Mathlib
 import KostkaNumbers.Util.FromCounts
-import KostkaNumbers.Util.MinMaxEl
 import KostkaNumbers.Diagrams
 
 /-
@@ -21,13 +26,14 @@ def content (T : SemistandardYoungTableau γ) :=
 @[simp] lemma content_card_eq_card : T.content.card = γ.card := by
   simp [content]
 
-lemma mem_content_of_mem_cells {i j : ℕ} (h : (i, j) ∈ γ) : T i j ∈ T.content := by
+lemma mem_content_of_mem {i j : ℕ} (h : (i, j) ∈ γ) : T i j ∈ T.content := by
   simp only [content, Multiset.mem_map, Finset.mem_val, YoungDiagram.mem_cells, Prod.exists]
-  use i; use j
+  use i, j
 
 lemma mem_content_of_nonzero {i j : ℕ} (h : T i j ≠ 0) : T i j ∈ T.content := by
-  apply mem_content_of_mem_cells
-  contrapose! h; exact T.zeros h
+  refine mem_content_of_mem ?_
+  contrapose! h
+  exact T.zeros h
 
 
 
@@ -37,24 +43,26 @@ def bot_ssyt : SemistandardYoungTableau ⊥ := ⟨0, by simp, by simp, by simp�
 @[simp] lemma bot_content : bot_ssyt.content = ⊥ := by simp [content]
 
 lemma content_eq_bot_iff : T.content = ⊥ ↔ γ = ⊥ := by
-  simp [content]; symm
-  exact YoungDiagram.ext_iff
+  simp [content, eq_bot_iff_card_eq_zero]
 
 lemma ssyt_bot (T : SemistandardYoungTableau ⊥) : T = bot_ssyt := by
   ext i j
   rw [zeros T (notMem_bot (i, j)), zeros bot_ssyt (notMem_bot (i, j))]
 
 lemma zero_entry_of_bot {i j : ℕ} (h : γ = ⊥) : T i j = 0 := by
-  apply T.zeros; rw [h]; apply notMem_bot
+  refine T.zeros ?_
+  rw [h]
+  exact notMem_bot _
 
 
-lemma entry_le_max_el {γ : YoungDiagram} {T : SemistandardYoungTableau γ} {i j : ℕ}
-    (hTc : T.content ≠ 0) : T i j ≤ max_el T.content hTc := by
+lemma entry_le_max {γ : YoungDiagram} {T : SemistandardYoungTableau γ} {i j : ℕ}
+    (hTc : T.content.toList ≠ []) :
+    T i j ≤ T.content.toList.max hTc := by
   by_cases hij : T i j = 0
   · rw [hij]
-    exact Nat.zero_le (max_el T.content hTc)
-  · refine le_max_el' hTc ?_
-    exact mem_content_of_nonzero hij
+    exact Nat.zero_le _
+  · refine List.le_max_of_mem ?_
+    simp [mem_content_of_nonzero hij]
 
 lemma entry_lt_card {μ : Multiset ℕ} (h : T.content = μ.fromCounts) {i j : ℕ}
     (hij : (i, j) ∈ γ) : T i j < μ.card := by
@@ -62,54 +70,75 @@ lemma entry_lt_card {μ : Multiset ℕ} (h : T.content = μ.fromCounts) {i j : �
     contrapose! this
     exact Multiset.notMem_fromCounts μ (T i j) this
   rw [← h]
-  exact mem_content_of_mem_cells hij
-
-lemma entry_lt_rowLens_card (h : T.content = (Multiset.ofList γ.rowLens).fromCounts) {i j : ℕ}
-    (hij : (i, j) ∈ γ) : T i j < (Multiset.ofList γ.rowLens).card := by
-  exact entry_lt_card h hij
+  exact mem_content_of_mem hij
 
 
 lemma entry_ge_col {i j : ℕ} (h : (i, j) ∈ γ) : T i j ≥ i := by
   induction i with
   | zero => simp
   | succ i ih =>
-    calc T (i + 1) j
-      _ > T i j := T.col_strict (lt_add_one i) h
-      _ ≥ i := by refine ih ?_; exact γ.up_left_mem (le_of_lt (lt_add_one i)) (by rfl) h
+      calc T (i + 1) j
+        _ > T i j := T.col_strict (lt_add_one i) h
+        _ ≥ i := ih <| γ.up_left_mem (le_of_lt (lt_add_one i)) (by rfl) h
+
+
+-- upstream these six (or more?) lemmas
+@[simp]
+lemma Set.setOf_subtype_eq_eq_singleton {α : Type*} {p : α → Prop} (a : α) (ha : p a) :
+    {x : Subtype p | x.1 = a} = {⟨a, ha⟩} := by grind
+
+@[simp]
+lemma Set.setOf_subtype_eq_eq_singleton' {α : Type*} {p : α → Prop} (a : α) (ha : p a) :
+    {x : Subtype p | a = x.1} = {⟨a, ha⟩} := by grind
+
+@[simp]
+lemma Finset.filter_eq_eq_singleton {α : Type*} [DecidableEq α] {s : Finset α} (a : α)
+    (ha : a ∈ s) : Finset.filter (fun x ↦ x = a) s = {a} := by grind
+
+@[simp]
+lemma Finset.filter_eq_eq_singleton' {α : Type*} [DecidableEq α] {s : Finset α} (a : α)
+    (ha : a ∈ s) : Finset.filter (fun x ↦ a = x) s = {a} := by grind
+
+@[simp]
+lemma Finset.filter_subtype_eq_eq_singleton {α : Type*} [DecidableEq α] {p : α → Prop}
+    {s : Finset (Subtype p)} (a : α) (ha : p a) (has : ⟨a, ha⟩ ∈ s) :
+    Finset.filter (fun x : Subtype p ↦ x.1 = a) s = {⟨a, ha⟩} := by grind
+
+@[simp]
+lemma Finset.filter_subtype_eq_eq_singleton' {α : Type*} [DecidableEq α] {p : α → Prop}
+    {s : Finset (Subtype p)} (a : α) (ha : p a) (has : ⟨a, ha⟩ ∈ s) :
+    Finset.filter (fun x : Subtype p ↦ a = x.1) s = {⟨a, ha⟩} := by grind
+
+@[simp]
+lemma Fin.filter_eq_val_eq_singleton {n : ℕ} {s : Finset (Fin n)} (a : ℕ) (ha : a < n)
+    (has : ⟨a, ha⟩ ∈ s) :
+    Finset.filter (fun x : Fin n ↦ x.1 = a) s = {⟨a, ha⟩} := by grind
+
+@[simp]
+lemma Fin.filter_eq_val_eq_singleton' {n : ℕ} {s : Finset (Fin n)} (a : ℕ) (ha : a < n)
+    (has : ⟨a, ha⟩ ∈ s) :
+    Finset.filter (fun x : Fin n ↦ a = x.1) s = {⟨a, ha⟩} := by grind
+
 
 
 lemma highestWeight_content : (highestWeight γ).content =
     (Multiset.ofList γ.rowLens).fromCounts := by
-  simp [Multiset.fromCounts, content, highestWeight, DFunLike.coe]
+  simp only [content, DFunLike.coe, highestWeight, to_fun_eq_coe, Prod.mk.eta, Multiset.fromCounts,
+    Multiset.coe_sort, ge_iff_le]
   ext n
-  simp only [Multiset.count_map, ← ge_iff_le, List.coe_ofList_sorted (rowLens_sorted γ),
-    get_rowLens, Multiset.count_sum', Multiset.count_replicate]
-  by_cases hn : n < ((Multiset.ofList γ.rowLens).toList.mergeSort (· ≥ ·)).length
-  · rw [Finset.sum_eq_single_of_mem (⟨n, hn⟩ : {m //
-      m < ((Multiset.ofList γ.rowLens).toList.mergeSort (· ≥ ·)).length}) (Finset.mem_univ _)]
-    · simp [rowLen_eq_filter]
-    · simp only [Finset.mem_univ, ne_eq, ite_eq_right_iff, forall_const, Subtype.forall, ge_iff_le,
-        List.length_mergeSort, Multiset.length_toList, Multiset.coe_card, length_rowLens,
-        Subtype.mk.injEq]
-      intro a _ han han'
-      contradiction
-
-  · rw [Finset.sum_eq_zero]
-    · simp only [Multiset.card_eq_zero, Multiset.filter_eq_nil, Finset.mem_val, mem_cells,
-        Prod.forall]
-      intro i j hij
-      simp only [hij, ↓reduceIte]
-      contrapose! hn
-      simp only [hn, ge_iff_le, List.length_mergeSort, Multiset.length_toList, Multiset.coe_card,
-        length_rowLens, ← mem_iff_lt_colLen]
-      exact γ.up_left_mem (by rfl) (Nat.zero_le j) hij
-    · simp only [Finset.mem_univ, ite_eq_right_iff, forall_const, Subtype.forall, ge_iff_le,
-        List.length_mergeSort, Multiset.length_toList, Multiset.coe_card, length_rowLens]
-      intro a ha han
-      rw [han] at ha
-      simp only [ge_iff_le, List.length_mergeSort, Multiset.length_toList, Multiset.coe_card,
-        length_rowLens, not_lt] at hn
-      omega
+  simp only [Multiset.count_map, ← rowLen_eq_filter, get_rowLens, Multiset.count_sum',
+    List.mergeSort_eq_self _ γ.rowLens_sorted.pairwise, Multiset.count_replicate, Finset.sum_ite,
+    Finset.sum_const_zero, add_zero]
+  let : Fintype {n : ℕ // n < (γ.rowLens.mergeSort (· ≥ ·)).length} :=
+    Fintype.ofFinite { n // n < (γ.rowLens.mergeSort (· ≥ ·)).length }
+  by_cases! hn : n < ((Multiset.ofList γ.rowLens).sort (· ≥ ·)).length
+  · rw [Finset.filter_subtype_eq_eq_singleton n hn (Finset.mem_univ _)]
+    simp
+  · simp only [ge_iff_le, Multiset.coe_sort, List.length_mergeSort, length_rowLens] at hn
+    rw [rowLen_eq_zero <| Nat.not_lt.mpr hn]
+    refine (Finset.sum_eq_zero ?_).symm
+    simp
+    grind
 
 
 
@@ -118,18 +147,15 @@ lemma entry_zero_of_content_eq_replicate (n : ℕ)
     (h : T.content = Multiset.replicate n 0) (i j : ℕ) : T i j = 0 := by
   by_cases hb : γ = ⊥
   · exact zero_entry_of_bot hb
-
   suffices T i j ∈ T.content by
     rw [h] at this
     exact Multiset.eq_of_mem_replicate this
   by_cases htij : T i j = 0
-  · rw [htij, h]
-    refine Multiset.mem_replicate.mpr ?_
+  · rw [htij, h, Multiset.mem_replicate]
     simp only [ne_eq, and_true]
     contrapose! hb
-    rw [hb, Multiset.replicate_zero, ← Multiset.bot_eq_zero, content_eq_bot_iff] at h
-    exact h
-  exact mem_content_of_nonzero htij
+    rwa [hb, Multiset.replicate_zero, ← Multiset.bot_eq_zero, content_eq_bot_iff] at h
+  · exact mem_content_of_nonzero htij
 
 
 
@@ -137,16 +163,12 @@ theorem top_left_of_content_fromCounts {μ : Multiset ℕ} (hγ : γ ≠ ⊥)
     (h : T.content = μ.fromCounts) : T 0 0 = 0 := by
   have h0 : 0 ∈ μ.fromCounts := by
     refine Multiset.zero_mem_fromCounts_of_nonempty ?_
-    rw [← h, ne_eq, ← bot_eq_zero, content_eq_bot_iff]
-    exact hγ
-  rw [← h] at h0
-  simp [content] at h0
+    rwa [← h, ne_eq, ← bot_eq_zero, content_eq_bot_iff]
+  simp only [← h, content, Multiset.mem_map, Finset.mem_val, mem_cells, Prod.exists] at h0
   obtain ⟨i, j, hij, hT⟩ := h0
   refine antisymm ?_ (Nat.zero_le (T 0 0))
   nth_rw 3 [← hT]
-  have hi : T 0 0 ≤ T i 0 := by
-    exact T.col_weak (Nat.zero_le i) <| γ.up_left_mem (by rfl) (Nat.zero_le j) hij
-  refine le_trans hi ?_
+  refine le_trans (T.col_weak (Nat.zero_le i) <| γ.up_left_mem (by rfl) (Nat.zero_le j) hij) ?_
   exact T.row_weak_of_le (Nat.zero_le j) hij
 
 

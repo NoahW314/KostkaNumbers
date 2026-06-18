@@ -1,5 +1,4 @@
 import Mathlib
-import KostkaNumbers.Util.MinMaxEl
 
 def ltCount (i : ℕ) (L : List ℕ) : ℕ := List.countP (fun j ↦ j ∈ L) (List.range i)
 
@@ -113,15 +112,15 @@ lemma ltCount_mono {i j : ℕ} (L : List ℕ) (h : i ≤ j) : ltCount i L ≤ lt
   refine List.Sublist.countP_le ?_
   exact List.range_sublist.mpr h
 
-lemma ltCount_min_eq_zero {L : List ℕ} (hL : Multiset.ofList L ≠ 0) :
-    ltCount (min_el L hL) L = 0 := by
+lemma ltCount_min_eq_zero {L : List ℕ} :
+    ltCount (L.min?.getD 0) L = 0 := by
   simp only [ltCount, List.countP_eq_zero, List.mem_range, decide_eq_true_eq]
   intro a
   contrapose!
-  exact min_el_le' hL
+  exact List.min?_getD_le_of_mem
 
-lemma ltCount_max_eq_length {L : List ℕ} (hL : Multiset.ofList L ≠ 0) (h : L.Nodup) :
-    ltCount ((max_el L hL) + 1) L = L.length := by
+lemma ltCount_max_eq_length {L : List ℕ} (h : L.Nodup) :
+    ltCount ((L.max?.getD 0) + 1) L = L.length := by
   unfold ltCount
   rw [← Finset.sum_filter_count_eq_countP, ← List.toFinset_card_of_nodup h]
   simp only [List.count_range, Finset.sum_boole, Nat.cast_id]
@@ -134,16 +133,16 @@ lemma ltCount_max_eq_length {L : List ℕ} (hL : Multiset.ofList L ≠ 0) (h : L
   · intro hx
     simp only [List.mem_toFinset] at hx
     simp only [Finset.mem_filter, List.mem_toFinset, List.mem_range, hx, and_true, and_self]
-    have hjx := le_max_el' hL hx
-    omega
+    suffices x ≤ L.max?.getD 0 by exact Order.lt_add_one_iff.mpr this
+    exact List.le_max?_getD_of_mem hx
 
 lemma ltCount_le_length (i : ℕ) (L : List ℕ) (h : L.Nodup) : ltCount i L ≤ L.length := by
   by_cases hL : Multiset.ofList L = 0
   · rw [Multiset.coe_eq_zero] at hL
     simp [hL, ltCount]
 
-  let j := (max_el (↑L) hL) + 1
-  have hj := ltCount_max_eq_length hL h
+  let j := L.max?.getD 0 + 1
+  have hj := ltCount_max_eq_length h
   rw [← hj]
   by_cases hi : i ≤ j
   · exact ltCount_mono L hi
@@ -156,11 +155,12 @@ lemma ltCount_le_length (i : ℕ) (L : List ℕ) (h : L.Nodup) : ltCount i L ≤
       List.mem_range, Function.comp_apply, decide_eq_true_eq]
     intro a _
     by_contra!
-    apply le_max_el' hL at this
+    have this : L.max?.getD 0 + 1 + a ≤ L.max?.getD 0 := List.le_max?_getD_of_mem this
     omega
 
-lemma ltCount_eq_length (i : ℕ) (L : List ℕ) (hL : Multiset.ofList L ≠ 0) (h : L.Nodup) :
-    ltCount i L = L.length ↔ i > max_el L hL := by
+
+lemma ltCount_eq_length (i : ℕ) (L : List ℕ) (hL : L ≠ []) (h : L.Nodup) :
+    ltCount i L = L.length ↔ i > L.max?.getD 0 := by
   constructor
   · contrapose!
     intro hi
@@ -175,15 +175,14 @@ lemma ltCount_eq_length (i : ℕ) (L : List ℕ) (hL : Multiset.ofList L ≠ 0) 
       simp only [Finset.mem_filter, List.mem_toFinset, List.mem_range, and_imp]
       exact fun _ a _ ↦ a
     · rw [← Finset.symmDiff_nonempty]
-      use (max_el L hL)
+      use L.max?.getD 0
       rw [Finset.mem_symmDiff]
       right
-      simp only [List.mem_toFinset, Finset.mem_filter, List.mem_range, not_and, not_lt, hi,
-        implies_true, and_true]
-      exact max_el_mem hL
+      simp [List.mem_toFinset, Finset.mem_filter, List.mem_range, not_lt, hi, and_true,
+        List.max?_mem, Option.getD_of_ne_none, hL]
   · intro hi
     refine le_antisymm (ltCount_le_length i L h) ?_
-    rw [← ltCount_max_eq_length hL h]
+    rw [← ltCount_max_eq_length h]
     exact ltCount_mono L hi
 
 lemma ltCount_tail_lt {i : ℕ} {L : List ℕ} (hL : L ≠ []) (h : ↑L = Multiset.range L.length)
@@ -227,9 +226,8 @@ lemma unreduceList_length {a : ℕ} {L : List ℕ} : (unreduceList a L).length =
 
 lemma reduceList_multiset (L : List ℕ) (h : L.Nodup) : Multiset.ofList (reduceList L) =
     Multiset.range L.length := by
-  by_cases hL : Multiset.ofList L = 0
-  · rw [Multiset.coe_eq_zero] at hL
-    simp [hL, reduceList]
+  by_cases hL : L = []
+  · simp [hL, reduceList]
 
   ext x
   rw [Multiset.coe_count, Multiset.count_eq_of_nodup (Multiset.nodup_range _)]
@@ -256,20 +254,20 @@ lemma reduceList_multiset (L : List ℕ) (h : L.Nodup) : Multiset.ofList (reduce
     · unfold reduceList
       simp only [List.get_eq_getElem, List.mem_ofFn]
       by_cases h0 : x = 0
-      · let k := min_el L hL
-        have hkL := min_el_mem hL
+      · let k : ℕ := L.min?.getD 0
+        have hkL : k ∈ L := by simp [k, List.min?_mem, Option.getD_of_ne_none, hL]
         obtain ⟨i, ⟨hi, him⟩⟩ := List.getElem_of_mem hkL
         use ⟨i, hi⟩
-        simp [him, h0, ltCount_min_eq_zero]
+        simp [him, h0, k, ltCount_min_eq_zero]
 
       let k := sSup {k : ℕ | ltCount k L < x}
       have hbd : BddAbove {k : ℕ | ltCount k L < x} := by
-        use ((max_el L hL) + 1)
+        use (L.max?.getD 0 + 1)
         simp [upperBounds]
         intro j hj
         contrapose! hj
-        have hj : j > max_el L hL := by omega
-        apply (ltCount_eq_length _ _ hL h).mpr at hj
+        have hj : j > L.max?.getD 0 := by omega
+        rw [← ltCount_eq_length _ _ hL h] at hj
         rw [Multiset.mem_range] at hx
         omega
       have hk : ltCount k L < x := by
@@ -318,13 +316,13 @@ lemma reduceList_multiset (L : List ℕ) (h : L.Nodup) : Multiset.ofList (reduce
       let y := sInf {y ∈ L | L[i] < y}
       have hy : y ∈ {y ∈ L | L[i] < y} := by
         refine csInf_mem ?_
-        use (max_el L hL)
+        use L.max?.getD 0
         rw [Set.mem_setOf]
         constructor
-        · exact max_el_mem hL
-        · refine lt_of_le_of_ne (le_max_el' hL (by simp)) ?_
+        · simp [List.max?_mem, Option.getD_of_ne_none, hL]
+        · refine lt_of_le_of_ne (L.le_max?_getD_of_mem (by simp)) ?_
           contrapose! hx
-          rw [Multiset.mem_range, ← ltCount_max_eq_length hL h, ← hx, hik, hk'', hkx]
+          rw [Multiset.mem_range, ← ltCount_max_eq_length h, ← hx, hik, hk'', hkx]
           omega
       rw [Set.mem_setOf] at hy
       obtain ⟨hyL, hyi⟩ := hy
@@ -344,7 +342,7 @@ lemma reduceList_multiset (L : List ℕ) (h : L.Nodup) : Multiset.ofList (reduce
     have hix : ltCount L[i.1] L = L.length := by omega
     rw [ltCount_eq_length _ _ hL h] at hix
     have hli : L[i.1] ∈ L := by simp
-    have := le_max_el' hL hli
+    have hli2 : L[i.1] ≤ L.max?.getD 0 := List.le_max?_getD_of_mem hli
     omega
 
 -- proof of the inverse relationships

@@ -1,5 +1,4 @@
 import Mathlib
-import KostkaNumbers.Util.MinMaxEl
 import KostkaNumbers.Basic
 import KostkaNumbers.Dominate
 import KostkaNumbers.HookDiagram
@@ -114,6 +113,7 @@ theorem dominates_of_kostka_pos (h0 : 0 ∉ μ) (hk : 0 < kostkaNumber γ μ) :
     exact γ.cells.nodup
 -/
 
+/-
 private lemma nat_lemma {a b c d : ℕ} (h1 : a ≥ b) (h2 : b ≥ c) (h3 : c ≥ d) :
   d ≤ a - (b - c) := by omega
 
@@ -1116,7 +1116,7 @@ theorem exists_ssyt_of_dominates (γ : YoungDiagram) (μ : Multiset ℕ)
       rw [Nat.pos_iff_ne_zero]
       exact min_el_ne_zero hμ h0
 
-
+-/
 
 /-
 theorem kostka_pos_iff_dominates (h : γ.card = μ.sum) (h0 : 0 ∉ μ) : 0 < kostkaNumber γ μ ↔

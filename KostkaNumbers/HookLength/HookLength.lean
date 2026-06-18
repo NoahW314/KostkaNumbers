@@ -1,3 +1,9 @@
+/-
+Copyright (c) 2026 Noah Walker. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Noah Walker
+-/
+
 import Mathlib
 import KostkaNumbers.Basic
 import KostkaNumbers.RestrictExtend
@@ -13,8 +19,11 @@ def hookLength (γ : YoungDiagram) (i j : ℕ) : ℕ :=
     γ.hookLength i j = (γ.rowLen i - (j + 1)) + (γ.colLen j - (i + 1)) + 1 := by rfl
 
 
-def IsCornerCell (γ : YoungDiagram) (x : ℕ × ℕ) :=
-  x.2 + 1 = γ.rowLen x.1 ∧ x.1 + 1 = γ.colLen x.2
+-- def IsCornerCell (γ : YoungDiagram) (x : ℕ × ℕ) :=
+--   x.2 + 1 = γ.rowLen x.1 ∧ x.1 + 1 = γ.colLen x.2
+
+def corners (γ : YoungDiagram) : Finset (ℕ × ℕ) :=
+    {x ∈ γ.cells | x.2 + 1 = γ.rowLen x.1 ∧ x.1 + 1 = γ.colLen x.2}
 
 def hook (γ : YoungDiagram) (i j : ℕ) : Finset (ℕ × ℕ) :=
     {x ∈ γ.cells | ((x.1 = i ∧ x.2 ≥ j) ∨ (x.1 ≥ i ∧ x.2 = j))}
@@ -32,61 +41,25 @@ lemma hook_card_eq_hookLength (γ : YoungDiagram) (i j : ℕ) (h : (i, j) ∈ γ
   · intro x hx
     rw [Finset.mem_coe] at hx
     simp only [hookLength_def, Finset.coe_range, ge_iff_le, Set.mem_Iio, f]
-    split_ifs with hij
-    · obtain ⟨hxi, hxj⟩ := hij
-      subst hxi
-      simp only [hook, ge_iff_le, Finset.mem_filter, mem_cells, true_and, le_refl] at hx
-      obtain ⟨hx, _⟩ := hx
-      rw [γ.mem_iff_lt_rowLen] at hx
-      omega
-    · have hij' : (x.1 ≥ i ∧ x.2 = j) := by
-        simp only [hook, ge_iff_le, Finset.mem_filter, mem_cells] at hx
-        omega
-      obtain ⟨hxi, hxj⟩ := hij'
-      subst hxj
-      simp only [hook, ge_iff_le, Finset.mem_filter, mem_cells, le_refl, and_true] at hx
-      obtain ⟨hx, _⟩ := hx
-      rw [γ.mem_iff_lt_colLen] at hx
-      omega
+    grind [γ.mem_iff_lt_colLen, γ.mem_iff_lt_rowLen, hook, mem_cells]
   constructor
-  · intro x hx y hy hf
-    simp_all [hook, f]
-    rw [Prod.ext_iff]
-    obtain ⟨hxγ, hx⟩ := hx
-    obtain ⟨hyγ, hy⟩ := hy
-    split_ifs at hf with hx' hy' hy'
-    · omega
-    · obtain ⟨hxi, hxj⟩ := hx'
-      subst hxi
-      rw [γ.mem_iff_lt_rowLen] at hxγ
-      omega
-    · obtain ⟨hyi, hyj⟩ := hy'
-      subst hyi
-      rw [γ.mem_iff_lt_rowLen] at hyγ
-      omega
-    · omega
+  · grind [γ.mem_iff_lt_rowLen, hook, mem_cells, Set.InjOn]
   · intro a
     simp only [hookLength_def, Finset.coe_range, Set.mem_Iio, ge_iff_le, hook, Finset.coe_filter,
       mem_cells, Set.mem_image, Set.mem_setOf_eq, Prod.exists, f]
     intro ha
     by_cases hah : a ≤ γ.rowLen i - (j + 1)
-    · use i; use (a + j)
+    · use i, (a + j)
       simp only [le_add_iff_nonneg_left, zero_le, and_self, le_refl, Nat.add_eq_right, true_and,
         true_or, and_true, ↓reduceIte, add_tsub_cancel_right]
-      rw [γ.mem_iff_lt_rowLen]
-      rw [γ.mem_iff_lt_rowLen] at h
-      omega
-    · use (a - (γ.rowLen i - (j + 1)) + i); use j
-      simp [γ.mem_iff_lt_colLen, show a - (γ.rowLen i - (j + 1)) ≠ 0 by omega]
-      omega
+      rw [γ.mem_iff_lt_rowLen] at h ⊢
+      lia
+    · use (a - (γ.rowLen i - (j + 1)) + i), j
+      grind [γ.mem_iff_lt_colLen]
 
 lemma corner_iff_hookLength_eq_one (γ : YoungDiagram) (x : ℕ × ℕ) (hx : x ∈ γ) :
-    γ.IsCornerCell x ↔ γ.hookLength x.1 x.2 = 1 := by
-  simp only [IsCornerCell, hookLength_def, Nat.add_eq_right, Nat.add_eq_zero]
-  have hx2 := hx
-  rw [γ.mem_iff_lt_rowLen] at hx
-  rw [γ.mem_iff_lt_colLen] at hx2
-  omega
+    (x.2 + 1 = γ.rowLen x.1 ∧ x.1 + 1 = γ.colLen x.2) ↔ γ.hookLength x.1 x.2 = 1 := by
+  grind [γ.mem_iff_lt_rowLen, γ.mem_iff_lt_colLen, hookLength_def]
 
 lemma hookLength_ne_zero (γ : YoungDiagram) (i j : ℕ) (h : (i, j) ∈ γ) : γ.hookLength i j ≠ 0 := by
   rw [← Nat.pos_iff_ne_zero, ← hook_card_eq_hookLength _ _ _ h]
@@ -99,6 +72,6 @@ lemma exists_hook_of_hookLength_ne_one (γ : YoungDiagram) (i j : ℕ) (hij : (i
   refine Finset.exists_mem_ne ?_ (i, j)
   rw [hook_card_eq_hookLength _ _ _ hij]
   have hhl := γ.hookLength_ne_zero i j hij
-  omega
+  lia
 
 end YoungDiagram
